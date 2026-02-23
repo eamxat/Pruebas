@@ -57,7 +57,7 @@
         }
 
         /* =========================================
-           CONTENEDOR CANVAS (OPTIMIZADO PARA 60FPS IOS/ANDROID)
+           CONTENEDOR WEBGL (SOLUCIÓN DEFINITIVA IOS)
            ========================================= */
         #blobs-layer {
             position: absolute;
@@ -68,33 +68,12 @@
             height: 100dvh;
             z-index: 2;
             pointer-events: none;
-            
-            /* El filtro se aplica al contenedor para máxima aceleración por GPU */
-            filter: url('#gooey-filter');
-            -webkit-filter: url('#gooey-filter');
-            
-            /* Garantiza que la capa se envíe al hardware dedicado */
-            transform: translateZ(0);
-            mix-blend-mode: screen;
         }
 
         #blob-canvas {
             width: 100%;
             height: 100%;
             display: block;
-        }
-
-        /* =========================================
-           ESTILO DEL SVG ESTRUCTURAL
-           ========================================= */
-        .svg-defs {
-            position: fixed;
-            pointer-events: none;
-            z-index: -1;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 0;
         }
 
         /* =========================================
@@ -161,26 +140,11 @@
     <div id="noise-overlay"></div>
 
     <!-- 
-      CONTENEDOR HTML5 CANVAS (RENDIMIENTO EXTREMO)
+      CONTENEDOR WEBGL (Soporte perfecto para iOS / Safari)
     -->
     <div id="blobs-layer">
         <canvas id="blob-canvas"></canvas>
     </div>
-
-    <!-- FILTRO SVG ESTRUCTURAL (Invisible) -->
-    <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <filter id="gooey-filter" x="-25%" y="-25%" width="150%" height="150%" 
-                    color-interpolation-filters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
-                <feColorMatrix in="blur" mode="matrix" 
-                               values="1 0 0 0 0  
-                                       0 1 0 0 0  
-                                       0 0 1 0 0  
-                                       0 0 0 28 -10" />
-            </filter>
-        </defs>
-    </svg>
 
     <!-- ELEMENTOS UI -->
     <button id="color-switch">Switch</button>
@@ -192,29 +156,74 @@
     <script>
         /**
          * =========================================
-         * SISTEMA DINÁMICO DE COLORES PARA CANVAS
+         * MOTOR WEBGL (SHADERS) PARA METABALLS LÍQUIDOS
          * =========================================
+         * Esta técnica elimina la dependencia de filtros CSS/SVG.
+         * Renderiza matemáticas de líquidos de forma nativa asegurando 
+         * que en iOS nunca se rompa la fusión ni la transparencia.
          */
-        window.blobColorCyan = '#1FA3C6';
-        window.blobColorGlow = '#6FE3FF';
 
-        function updateCanvasColors() {
-            const rootStyles = getComputedStyle(document.documentElement);
-            window.blobColorCyan = rootStyles.getPropertyValue('--planet-cyan').trim() || '#1FA3C6';
-            window.blobColorGlow = rootStyles.getPropertyValue('--glow-light').trim() || '#6FE3FF';
+        // 1. Shaders
+        const vsSource = `
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+            }
+        `;
+
+        const fsSource = `
+            precision highp float;
+            uniform vec2 u_resolution;
+            uniform vec3 u_colorCyan;
+            uniform vec3 u_colorGlow;
+            uniform vec3 u_blobs[10];
+
+            void main() {
+                vec2 st = gl_FragCoord.xy;
+                float v = 0.0;
+                
+                // Cálculo del campo de influencia de Metaball
+                for(int i = 0; i < 10; i++) {
+                    vec2 pos = u_blobs[i].xy;
+                    float r = u_blobs[i].z;
+                    
+                    if (r > 0.0) {
+                        vec2 diff = st - pos;
+                        // Se añade +1.0 para evitar división por cero en el núcleo
+                        float d2 = dot(diff, diff) + 1.0; 
+                        v += (r * r) / d2;
+                    }
+                }
+                
+                // Anti-aliasing premium en el borde de la forma líquida (v = 1.0)
+                float alpha = smoothstep(0.98, 1.02, v);
+                
+                if (alpha > 0.0) {
+                    // Simular un radial gradient natural: brillante en el núcleo, cian en los bordes
+                    float glowMix = smoothstep(1.0, 2.5, v);
+                    vec3 finalColor = mix(u_colorCyan, u_colorGlow, glowMix);
+                    
+                    // Salida final premultiplicando el canal alfa para un blending perfecto
+                    gl_FragColor = vec4(finalColor * alpha, alpha);
+                } else {
+                    gl_FragColor = vec4(0.0);
+                }
+            }
+        `;
+
+        function hexToRgb(hex) {
+            hex = hex.replace('#', '');
+            if(hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+            const bigint = parseInt(hex, 16);
+            return [
+                ((bigint >> 16) & 255) / 255,
+                ((bigint >> 8) & 255) / 255,
+                (bigint & 255) / 255
+            ];
         }
-        // Inicializar colores antes de arrancar
-        updateCanvasColors();
 
-        /**
-         * =========================================
-         * MOTOR ORGÁNICO CANVAS 2D (60 FPS MOBILE)
-         * =========================================
-         */
         class OrganicBlob {
             constructor() {
-                this.baseOpacity = 0.6 + Math.random() * 0.4;
-                
                 this.initSize();
                 this.baseX = Math.random() * window.innerWidth;
                 this.baseY = Math.random() * window.innerHeight;
@@ -238,31 +247,11 @@
                 this.size = vMin * (0.4 + Math.random() * 0.5);
             }
 
-            update(time, ctx) {
-                const x = this.baseX + Math.sin(time * this.speedX + this.phaseX) * this.radiusX;
-                const y = this.baseY + Math.cos(time * this.speedY + this.phaseY) * this.radiusY;
+            update(time) {
+                this.x = this.baseX + Math.sin(time * this.speedX + this.phaseX) * this.radiusX;
+                this.y = this.baseY + Math.cos(time * this.speedY + this.phaseY) * this.radiusY;
                 const scale = 0.9 + Math.sin(time * this.scaleSpeed + this.scalePhase) * 0.3;
-                
-                const currentSize = this.size * scale;
-                const radius = Math.max(0.1, currentSize / 2);
-
-                ctx.save();
-                ctx.globalAlpha = this.baseOpacity;
-                
-                // Generar gradiente simulando la posición original (30% 30% con un radio de 70%)
-                const gx = x - currentSize * 0.2;
-                const gy = y - currentSize * 0.2;
-                
-                const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, currentSize * 0.7);
-                grad.addColorStop(0, window.blobColorGlow);
-                grad.addColorStop(0.8, window.blobColorCyan);
-                
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(x, y, radius, 0, Math.PI * 2);
-                ctx.fill();
-                
-                ctx.restore();
+                this.currentSize = this.size * scale;
             }
 
             handleResize() {
@@ -272,50 +261,118 @@
             }
         }
 
-        class LiquidController {
+        class WebGLLiquidController {
             constructor() {
                 this.canvas = document.getElementById('blob-canvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.blobs = [];
-                this.numBlobs = window.innerWidth < 768 ? 5 : 10;
+                this.gl = this.canvas.getContext('webgl', { premultipliedAlpha: true, alpha: true }) || 
+                          this.canvas.getContext('experimental-webgl');
                 
-                this.init();
+                this.initWebGL();
+                
+                this.blobs = [];
+                // Densidad responsiva
+                this.numBlobs = window.innerWidth < 768 ? 6 : 10;
+                
+                for (let i = 0; i < this.numBlobs; i++) {
+                    this.blobs.push(new OrganicBlob());
+                }
+
                 this.bindEvents();
+                this.handleResize();
+                this.updateColors();
                 
                 this.animate = this.animate.bind(this);
                 requestAnimationFrame(this.animate);
             }
 
-            init() {
-                this.handleResize();
-                for (let i = 0; i < this.numBlobs; i++) {
-                    this.blobs.push(new OrganicBlob());
-                }
+            initWebGL() {
+                const gl = this.gl;
+                
+                // Compilar shaders
+                const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vertexShader, vsSource);
+                gl.compileShader(vertexShader);
+                
+                const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fragmentShader, fsSource);
+                gl.compileShader(fragmentShader);
+                
+                // Enlazar programa
+                this.program = gl.createProgram();
+                gl.attachShader(this.program, vertexShader);
+                gl.attachShader(this.program, fragmentShader);
+                gl.linkProgram(this.program);
+                gl.useProgram(this.program);
+
+                // Configurar geometría (Malla que cubre toda la pantalla)
+                const positionBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+                    -1.0, -1.0,   1.0, -1.0,  -1.0,  1.0,
+                    -1.0,  1.0,   1.0, -1.0,   1.0,  1.0
+                ]), gl.STATIC_DRAW);
+
+                const positionLocation = gl.getAttribLocation(this.program, "a_position");
+                gl.enableVertexAttribArray(positionLocation);
+                gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+                // Referencias a Uniforms
+                this.uResLoc = gl.getUniformLocation(this.program, "u_resolution");
+                this.uCyanLoc = gl.getUniformLocation(this.program, "u_colorCyan");
+                this.uGlowLoc = gl.getUniformLocation(this.program, "u_colorGlow");
+                this.uBlobsLoc = gl.getUniformLocation(this.program, "u_blobs");
+            }
+
+            updateColors() {
+                const rootStyles = getComputedStyle(document.documentElement);
+                const cyan = hexToRgb(rootStyles.getPropertyValue('--planet-cyan').trim() || '#1FA3C6');
+                const glow = hexToRgb(rootStyles.getPropertyValue('--glow-light').trim() || '#6FE3FF');
+                
+                this.gl.uniform3f(this.uCyanLoc, cyan[0], cyan[1], cyan[2]);
+                this.gl.uniform3f(this.uGlowLoc, glow[0], glow[1], glow[2]);
             }
 
             handleResize() {
-                // LÍMITE INTELIGENTE DE RESOLUCIÓN (Evita caída de FPS en Retina/Móviles)
+                // Prevenir sobrecarga en resoluciones extremas de móvil para 60fps constantes
                 const isMobile = window.innerWidth < 768;
-                const maxDpr = isMobile ? 1.25 : 1.5; 
-                this.dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+                this.dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0);
                 
                 this.canvas.width = window.innerWidth * this.dpr;
                 this.canvas.height = window.innerHeight * this.dpr;
-                this.ctx.scale(this.dpr, this.dpr);
+                this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+                this.gl.uniform2f(this.uResLoc, this.canvas.width, this.canvas.height);
                 
                 this.blobs.forEach(blob => blob.handleResize());
             }
 
             animate(currentTime) {
-                // Limpiar frame
-                this.ctx.clearRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
+                // Construir Array con información espacial para el Fragment Shader
+                const blobsData = new Float32Array(30); // Max 10 blobs * 3 (x,y,r)
                 
-                // Efecto mezcla brillante interno al chocar blobs
-                this.ctx.globalCompositeOperation = 'screen';
-                
-                for (let i = 0; i < this.blobs.length; i++) {
-                    this.blobs[i].update(currentTime, this.ctx);
+                for (let i = 0; i < 10; i++) {
+                    if (i < this.blobs.length) {
+                        this.blobs[i].update(currentTime);
+                        blobsData[i * 3 + 0] = this.blobs[i].x * this.dpr;
+                        // Invertir Y porque WebGL lee de abajo hacia arriba (0,0 es abajo-izq)
+                        blobsData[i * 3 + 1] = (window.innerHeight - this.blobs[i].y) * this.dpr;
+                        // Enviar el radio ajustado
+                        blobsData[i * 3 + 2] = (this.blobs[i].currentSize / 2) * this.dpr;
+                    } else {
+                        // Blobs no utilizados no generan influencia (r = 0)
+                        blobsData[i * 3 + 0] = 0.0;
+                        blobsData[i * 3 + 1] = 0.0;
+                        blobsData[i * 3 + 2] = 0.0;
+                    }
                 }
+                
+                // Enviar coordenadas actualizadas a la GPU
+                this.gl.uniform3fv(this.uBlobsLoc, blobsData);
+                
+                // Dibujar el fotograma
+                this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
+                this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+                this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+                
                 requestAnimationFrame(this.animate);
             }
 
@@ -330,8 +387,11 @@
             }
         }
 
+        // Variable global para que el botón Switch pueda avisar al motor WebGL de los nuevos colores
+        window.liquidController = null;
+
         document.addEventListener('DOMContentLoaded', () => {
-            new LiquidController();
+            window.liquidController = new WebGLLiquidController();
         });
 
         /**
@@ -390,13 +450,16 @@
                 rootElement.style.setProperty(cssVariable, colorValue);
             }
             
-            // Actualizar el motor de Canvas para que reconozca los nuevos colores al instante
-            updateCanvasColors();
+            // Avisar a la GPU de los nuevos colores extraídos desde CSS
+            if (window.liquidController) {
+                window.liquidController.updateColors();
+            }
         });
 
     </script>
 </body>
 </html>
+
 
 
 
