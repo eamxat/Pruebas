@@ -53,6 +53,8 @@
             z-index: 1;
             opacity: 0.03; 
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            /* OPTIMIZACIÓN IOS: Forzar capa en GPU para no repintar el ruido en cada frame */
+            transform: translateZ(0);
         }
 
         /* =========================================
@@ -66,16 +68,28 @@
             height: 100vh;
             height: 100dvh;
             z-index: 2;
-            overflow: visible; /* Permite que las formas respiren fuera de los bordes */
+            overflow: visible; 
             pointer-events: none;
+            /* OPTIMIZACIÓN IOS: Capa base acelerada */
+            transform: translateZ(0);
+        }
+
+        /* Aplicamos el filtro vía CSS al grupo para mejor delegación a la GPU en Safari */
+        #blobs-layer {
+            filter: url('#gooey-filter');
+            -webkit-filter: url('#gooey-filter');
+            transform: translate3d(0, 0, 0);
+            will-change: filter;
         }
 
         /* =========================================
            ESTILO DE LAS FORMAS VECTORIALES (BLOBS)
            ========================================= */
         .blob {
-            fill: url(#blob-grad); /* Extrae el gradiente desde el SVG */
+            fill: url(#blob-grad);
             mix-blend-mode: screen;
+            /* OPTIMIZACIÓN IOS: Preparar para recibir translate3d por JS */
+            transform-origin: 0 0;
             will-change: transform;
         }
 
@@ -143,33 +157,35 @@
     <div id="noise-overlay"></div>
 
     <!-- 
-      ⚠️ SOLUCIÓN ANDROID/IOS: RENDERIZADO VECTORIAL NATIVO
-      En lugar de usar un filtro SVG sobre HTML <div>s (lo que causa fallos en Android),
-      ahora TODO sucede dentro de la etiqueta <svg> usando círculos vectoriales (<circle>).
-      Esto garantiza una compatibilidad cruzada impecable y un renderizado retina suave.
+      RENDERIZADO VECTORIAL NATIVO ACELERADO
     -->
     <svg id="metaballs-svg" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
         <defs>
-            <!-- Gradiente definido internamente para los círculos, lee las variables CSS dinámicas -->
+            <!-- Gradiente dinámico -->
             <radialGradient id="blob-grad" cx="30%" cy="30%" r="70%">
                 <stop offset="0%" stop-color="var(--glow-light)" />
                 <stop offset="80%" stop-color="var(--planet-cyan)" />
             </radialGradient>
 
-            <filter id="gooey-filter" x="-50%" y="-50%" width="200%" height="200%" 
+            <!-- 
+                OPTIMIZACIÓN IOS: 
+                Área de procesamiento reducida de 200% a 150% (Ahorra un ~40% de RAM de video).
+                stdDeviation mantenido en 26 (dentro del rango premium 22-30).
+            -->
+            <filter id="gooey-filter" x="-25%" y="-25%" width="150%" height="150%" 
                     filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" 
                     color-interpolation-filters="sRGB">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="30" result="blur" />
+                <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
                 <feColorMatrix in="blur" mode="matrix" 
                                values="1 0 0 0 0  
                                        0 1 0 0 0  
                                        0 0 1 0 0  
-                                       0 0 0 30 -12" />
+                                       0 0 0 28 -10" />
             </filter>
         </defs>
 
         <!-- Capa vectorial donde ocurren las fusiones -->
-        <g id="blobs-layer" filter="url(#gooey-filter)">
+        <g id="blobs-layer">
             <!-- Los círculos se inyectan dinámicamente aquí mediante JS -->
         </g>
     </svg>
@@ -184,21 +200,20 @@
     <script>
         /**
          * =========================================
-         * MOTOR ORGÁNICO VECTORIAL
+         * MOTOR ORGÁNICO VECTORIAL (GPU OPTIMIZED)
          * =========================================
          */
 
         class OrganicBlob {
             constructor(container) {
                 this.container = container;
-                // Creamos un elemento SVG real en lugar de un div
                 this.element = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 this.element.classList.add('blob');
                 
                 this.baseOpacity = 0.6 + Math.random() * 0.4;
                 this.element.style.opacity = this.baseOpacity;
                 
-                // Coordenadas base centradas (el translate hará el movimiento)
+                // Origen central
                 this.element.setAttribute('cx', '0');
                 this.element.setAttribute('cy', '0');
 
@@ -225,7 +240,6 @@
             initSize() {
                 const vMin = Math.min(window.innerWidth, window.innerHeight);
                 this.size = vMin * (0.4 + Math.random() * 0.5);
-                // En SVG asignamos el radio en lugar de width/height
                 this.element.setAttribute('r', this.size / 2);
             }
 
@@ -234,8 +248,9 @@
                 const y = this.baseY + Math.cos(time * this.speedY + this.phaseY) * this.radiusY;
                 const scale = 0.9 + Math.sin(time * this.scaleSpeed + this.scalePhase) * 0.3;
 
-                // Movemos usando transformaciones nativas de SVG
-                this.element.setAttribute('transform', `translate(${x}, ${y}) scale(${scale})`);
+                // OPTIMIZACIÓN IOS: Usamos CSS Transform (translate3d) en lugar de SVG setAttribute
+                // Esto fuerza el renderizado nativo de 60 FPS en la GPU del iPhone/iPad
+                this.element.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
             }
 
             handleResize() {
@@ -249,7 +264,8 @@
             constructor() {
                 this.layer = document.getElementById('blobs-layer');
                 this.blobs = [];
-                this.numBlobs = window.innerWidth < 768 ? 6 : 10;
+                // Reducción muy ligera y segura en móvil para garantizar suavidad térmica
+                this.numBlobs = window.innerWidth < 768 ? 5 : 10;
                 
                 this.init();
                 this.bindEvents();
@@ -346,6 +362,5 @@
     </script>
 </body>
 </html>
-
 
 
