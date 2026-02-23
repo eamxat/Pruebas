@@ -158,12 +158,8 @@
          * =========================================
          * MOTOR WEBGL (SHADERS) PARA METABALLS LÍQUIDOS
          * =========================================
-         * Esta técnica elimina la dependencia de filtros CSS/SVG.
-         * Renderiza matemáticas de líquidos de forma nativa asegurando 
-         * que en iOS nunca se rompa la fusión ni la transparencia.
          */
 
-        // 1. Shaders
         const vsSource = `
             attribute vec2 a_position;
             void main() {
@@ -182,28 +178,35 @@
                 vec2 st = gl_FragCoord.xy;
                 float v = 0.0;
                 
-                // Cálculo del campo de influencia de Metaball
+                // Cálculo del campo de influencia de las metaballs
                 for(int i = 0; i < 10; i++) {
                     vec2 pos = u_blobs[i].xy;
                     float r = u_blobs[i].z;
                     
                     if (r > 0.0) {
                         vec2 diff = st - pos;
-                        // Se añade +1.0 para evitar división por cero en el núcleo
                         float d2 = dot(diff, diff) + 1.0; 
                         v += (r * r) / d2;
                     }
                 }
                 
-                // Anti-aliasing premium en el borde de la forma líquida (v = 1.0)
-                float alpha = smoothstep(0.98, 1.02, v);
+                // Anti-aliasing en los bordes para definir la forma de líquido sólido
+                float alpha = smoothstep(0.95, 1.05, v);
                 
                 if (alpha > 0.0) {
-                    // Simular un radial gradient natural: brillante en el núcleo, cian en los bordes
-                    float glowMix = smoothstep(1.0, 2.5, v);
-                    vec3 finalColor = mix(u_colorCyan, u_colorGlow, glowMix);
+                    // CORRECCIÓN "GAUSSIAN CIRCLES":
+                    // En lugar de hacer círculos brillantes sobre cada esfera (que causa el efecto feo),
+                    // aplicamos un degradado global sobre la masa líquida para unificarla visualmente.
+                    vec2 uv = st / u_resolution;
+                    float globalGradient = smoothstep(0.0, 1.5, uv.x + uv.y);
                     
-                    // Salida final premultiplicando el canal alfa para un blending perfecto
+                    vec3 baseColor = mix(u_colorCyan, u_colorGlow, globalGradient * 0.7);
+                    
+                    // Añadimos un sutil "grosor" interno donde la densidad del líquido es muy alta, 
+                    // sin revelar las esferas individuales.
+                    float thickness = smoothstep(1.0, 4.0, v);
+                    vec3 finalColor = mix(baseColor, u_colorGlow, thickness * 0.4);
+                    
                     gl_FragColor = vec4(finalColor * alpha, alpha);
                 } else {
                     gl_FragColor = vec4(0.0);
@@ -225,11 +228,15 @@
         class OrganicBlob {
             constructor() {
                 this.initSize();
-                this.baseX = Math.random() * window.innerWidth;
-                this.baseY = Math.random() * window.innerHeight;
+                
+                // CORRECCIÓN ÁREA: Centramos más los puntos de origen para que 
+                // el líquido no se salga fácilmente de la pantalla
+                this.baseX = window.innerWidth * (0.2 + Math.random() * 0.6);
+                this.baseY = window.innerHeight * (0.2 + Math.random() * 0.6);
 
-                this.radiusX = 150 + Math.random() * 300;
-                this.radiusY = 150 + Math.random() * 300;
+                // Movimientos circulares armónicos proporcionados a la pantalla
+                this.radiusX = window.innerWidth * (0.1 + Math.random() * 0.15);
+                this.radiusY = window.innerHeight * (0.1 + Math.random() * 0.15);
 
                 const speed = 0.0002 + (Math.random() * 0.00015);
                 this.speedX = speed * (Math.random() > 0.5 ? 1 : -1);
@@ -244,7 +251,9 @@
 
             initSize() {
                 const vMin = Math.min(window.innerWidth, window.innerHeight);
-                this.size = vMin * (0.4 + Math.random() * 0.5);
+                // CORRECCIÓN TAMAÑO: Esferas considerablemente más pequeñas (20% a 40% del tamaño de pantalla)
+                // Esto permite ver el fondo oscuro y la magia del efecto metaball
+                this.size = vMin * (0.2 + Math.random() * 0.2);
             }
 
             update(time) {
@@ -256,8 +265,8 @@
 
             handleResize() {
                 this.initSize();
-                this.baseX = Math.random() * window.innerWidth;
-                this.baseY = Math.random() * window.innerHeight;
+                this.baseX = window.innerWidth * (0.2 + Math.random() * 0.6);
+                this.baseY = window.innerHeight * (0.2 + Math.random() * 0.6);
             }
         }
 
@@ -270,8 +279,8 @@
                 this.initWebGL();
                 
                 this.blobs = [];
-                // Densidad responsiva
-                this.numBlobs = window.innerWidth < 768 ? 6 : 10;
+                // Densidad controlada
+                this.numBlobs = window.innerWidth < 768 ? 6 : 9;
                 
                 for (let i = 0; i < this.numBlobs; i++) {
                     this.blobs.push(new OrganicBlob());
@@ -288,7 +297,6 @@
             initWebGL() {
                 const gl = this.gl;
                 
-                // Compilar shaders
                 const vertexShader = gl.createShader(gl.VERTEX_SHADER);
                 gl.shaderSource(vertexShader, vsSource);
                 gl.compileShader(vertexShader);
@@ -297,14 +305,12 @@
                 gl.shaderSource(fragmentShader, fsSource);
                 gl.compileShader(fragmentShader);
                 
-                // Enlazar programa
                 this.program = gl.createProgram();
                 gl.attachShader(this.program, vertexShader);
                 gl.attachShader(this.program, fragmentShader);
                 gl.linkProgram(this.program);
                 gl.useProgram(this.program);
 
-                // Configurar geometría (Malla que cubre toda la pantalla)
                 const positionBuffer = gl.createBuffer();
                 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
                 gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -316,7 +322,6 @@
                 gl.enableVertexAttribArray(positionLocation);
                 gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
 
-                // Referencias a Uniforms
                 this.uResLoc = gl.getUniformLocation(this.program, "u_resolution");
                 this.uCyanLoc = gl.getUniformLocation(this.program, "u_colorCyan");
                 this.uGlowLoc = gl.getUniformLocation(this.program, "u_colorGlow");
@@ -333,7 +338,6 @@
             }
 
             handleResize() {
-                // Prevenir sobrecarga en resoluciones extremas de móvil para 60fps constantes
                 const isMobile = window.innerWidth < 768;
                 this.dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2.0);
                 
@@ -346,29 +350,23 @@
             }
 
             animate(currentTime) {
-                // Construir Array con información espacial para el Fragment Shader
-                const blobsData = new Float32Array(30); // Max 10 blobs * 3 (x,y,r)
+                const blobsData = new Float32Array(30); 
                 
                 for (let i = 0; i < 10; i++) {
                     if (i < this.blobs.length) {
                         this.blobs[i].update(currentTime);
                         blobsData[i * 3 + 0] = this.blobs[i].x * this.dpr;
-                        // Invertir Y porque WebGL lee de abajo hacia arriba (0,0 es abajo-izq)
                         blobsData[i * 3 + 1] = (window.innerHeight - this.blobs[i].y) * this.dpr;
-                        // Enviar el radio ajustado
                         blobsData[i * 3 + 2] = (this.blobs[i].currentSize / 2) * this.dpr;
                     } else {
-                        // Blobs no utilizados no generan influencia (r = 0)
                         blobsData[i * 3 + 0] = 0.0;
                         blobsData[i * 3 + 1] = 0.0;
                         blobsData[i * 3 + 2] = 0.0;
                     }
                 }
                 
-                // Enviar coordenadas actualizadas a la GPU
                 this.gl.uniform3fv(this.uBlobsLoc, blobsData);
                 
-                // Dibujar el fotograma
                 this.gl.clearColor(0.0, 0.0, 0.0, 0.0);
                 this.gl.clear(this.gl.COLOR_BUFFER_BIT);
                 this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
@@ -387,19 +385,12 @@
             }
         }
 
-        // Variable global para que el botón Switch pueda avisar al motor WebGL de los nuevos colores
         window.liquidController = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             window.liquidController = new WebGLLiquidController();
         });
 
-        /**
-         * =========================================
-         * SISTEMA DE CAMBIO DE COLOR GLOBAL (UI)
-         * =========================================
-         */
-        
         const colorPalettes = [
             { // 0: Azul Original
                 '--bg-deep-blue': '#0B0F5C',
@@ -450,7 +441,6 @@
                 rootElement.style.setProperty(cssVariable, colorValue);
             }
             
-            // Avisar a la GPU de los nuevos colores extraídos desde CSS
             if (window.liquidController) {
                 window.liquidController.updateColors();
             }
@@ -459,6 +449,7 @@
     </script>
 </body>
 </html>
+
 
 
 
