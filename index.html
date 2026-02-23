@@ -53,14 +53,13 @@
             z-index: 1;
             opacity: 0.03; 
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-            /* OPTIMIZACIÓN IOS: Forzar capa en GPU para no repintar el ruido en cada frame */
             transform: translateZ(0);
         }
 
         /* =========================================
-           CONTENEDOR VECTORIAL (COMPATIBLE ANDROID/IOS)
+           CONTENEDOR CANVAS (OPTIMIZADO PARA 60FPS IOS/ANDROID)
            ========================================= */
-        #metaballs-svg {
+        #blobs-layer {
             position: absolute;
             top: 0;
             left: 0;
@@ -68,29 +67,34 @@
             height: 100vh;
             height: 100dvh;
             z-index: 2;
-            overflow: visible; 
             pointer-events: none;
-            /* OPTIMIZACIÓN IOS: Capa base acelerada */
-            transform: translateZ(0);
-        }
-
-        /* Aplicamos el filtro vía CSS al grupo para mejor delegación a la GPU en Safari */
-        #blobs-layer {
+            
+            /* El filtro se aplica al contenedor para máxima aceleración por GPU */
             filter: url('#gooey-filter');
             -webkit-filter: url('#gooey-filter');
-            transform: translate3d(0, 0, 0);
-            will-change: filter;
+            
+            /* Garantiza que la capa se envíe al hardware dedicado */
+            transform: translateZ(0);
+            mix-blend-mode: screen;
+        }
+
+        #blob-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         /* =========================================
-           ESTILO DE LAS FORMAS VECTORIALES (BLOBS)
+           ESTILO DEL SVG ESTRUCTURAL
            ========================================= */
-        .blob {
-            fill: url(#blob-grad);
-            mix-blend-mode: screen;
-            /* OPTIMIZACIÓN IOS: Preparar para recibir translate3d por JS */
-            transform-origin: 0 0;
-            will-change: transform;
+        .svg-defs {
+            position: fixed;
+            pointer-events: none;
+            z-index: -1;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
         }
 
         /* =========================================
@@ -157,23 +161,16 @@
     <div id="noise-overlay"></div>
 
     <!-- 
-      RENDERIZADO VECTORIAL NATIVO ACELERADO
+      CONTENEDOR HTML5 CANVAS (RENDIMIENTO EXTREMO)
     -->
-    <svg id="metaballs-svg" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
-        <defs>
-            <!-- Gradiente dinámico -->
-            <radialGradient id="blob-grad" cx="30%" cy="30%" r="70%">
-                <stop offset="0%" stop-color="var(--glow-light)" />
-                <stop offset="80%" stop-color="var(--planet-cyan)" />
-            </radialGradient>
+    <div id="blobs-layer">
+        <canvas id="blob-canvas"></canvas>
+    </div>
 
-            <!-- 
-                OPTIMIZACIÓN IOS: 
-                Área de procesamiento reducida de 200% a 150% (Ahorra un ~40% de RAM de video).
-                stdDeviation mantenido en 26 (dentro del rango premium 22-30).
-            -->
+    <!-- FILTRO SVG ESTRUCTURAL (Invisible) -->
+    <svg class="svg-defs" xmlns="http://www.w3.org/2000/svg">
+        <defs>
             <filter id="gooey-filter" x="-25%" y="-25%" width="150%" height="150%" 
-                    filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" 
                     color-interpolation-filters="sRGB">
                 <feGaussianBlur in="SourceGraphic" stdDeviation="26" result="blur" />
                 <feColorMatrix in="blur" mode="matrix" 
@@ -183,11 +180,6 @@
                                        0 0 0 28 -10" />
             </filter>
         </defs>
-
-        <!-- Capa vectorial donde ocurren las fusiones -->
-        <g id="blobs-layer">
-            <!-- Los círculos se inyectan dinámicamente aquí mediante JS -->
-        </g>
     </svg>
 
     <!-- ELEMENTOS UI -->
@@ -200,26 +192,30 @@
     <script>
         /**
          * =========================================
-         * MOTOR ORGÁNICO VECTORIAL (GPU OPTIMIZED)
+         * SISTEMA DINÁMICO DE COLORES PARA CANVAS
          * =========================================
          */
+        window.blobColorCyan = '#1FA3C6';
+        window.blobColorGlow = '#6FE3FF';
 
+        function updateCanvasColors() {
+            const rootStyles = getComputedStyle(document.documentElement);
+            window.blobColorCyan = rootStyles.getPropertyValue('--planet-cyan').trim() || '#1FA3C6';
+            window.blobColorGlow = rootStyles.getPropertyValue('--glow-light').trim() || '#6FE3FF';
+        }
+        // Inicializar colores antes de arrancar
+        updateCanvasColors();
+
+        /**
+         * =========================================
+         * MOTOR ORGÁNICO CANVAS 2D (60 FPS MOBILE)
+         * =========================================
+         */
         class OrganicBlob {
-            constructor(container) {
-                this.container = container;
-                this.element = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                this.element.classList.add('blob');
-                
+            constructor() {
                 this.baseOpacity = 0.6 + Math.random() * 0.4;
-                this.element.style.opacity = this.baseOpacity;
                 
-                // Origen central
-                this.element.setAttribute('cx', '0');
-                this.element.setAttribute('cy', '0');
-
-                this.container.appendChild(this.element);
                 this.initSize();
-                
                 this.baseX = Math.random() * window.innerWidth;
                 this.baseY = Math.random() * window.innerHeight;
 
@@ -240,17 +236,33 @@
             initSize() {
                 const vMin = Math.min(window.innerWidth, window.innerHeight);
                 this.size = vMin * (0.4 + Math.random() * 0.5);
-                this.element.setAttribute('r', this.size / 2);
             }
 
-            update(time) {
+            update(time, ctx) {
                 const x = this.baseX + Math.sin(time * this.speedX + this.phaseX) * this.radiusX;
                 const y = this.baseY + Math.cos(time * this.speedY + this.phaseY) * this.radiusY;
                 const scale = 0.9 + Math.sin(time * this.scaleSpeed + this.scalePhase) * 0.3;
+                
+                const currentSize = this.size * scale;
+                const radius = Math.max(0.1, currentSize / 2);
 
-                // OPTIMIZACIÓN IOS: Usamos CSS Transform (translate3d) en lugar de SVG setAttribute
-                // Esto fuerza el renderizado nativo de 60 FPS en la GPU del iPhone/iPad
-                this.element.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+                ctx.save();
+                ctx.globalAlpha = this.baseOpacity;
+                
+                // Generar gradiente simulando la posición original (30% 30% con un radio de 70%)
+                const gx = x - currentSize * 0.2;
+                const gy = y - currentSize * 0.2;
+                
+                const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, currentSize * 0.7);
+                grad.addColorStop(0, window.blobColorGlow);
+                grad.addColorStop(0.8, window.blobColorCyan);
+                
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
             }
 
             handleResize() {
@@ -262,9 +274,9 @@
 
         class LiquidController {
             constructor() {
-                this.layer = document.getElementById('blobs-layer');
+                this.canvas = document.getElementById('blob-canvas');
+                this.ctx = this.canvas.getContext('2d');
                 this.blobs = [];
-                // Reducción muy ligera y segura en móvil para garantizar suavidad térmica
                 this.numBlobs = window.innerWidth < 768 ? 5 : 10;
                 
                 this.init();
@@ -275,14 +287,34 @@
             }
 
             init() {
+                this.handleResize();
                 for (let i = 0; i < this.numBlobs; i++) {
-                    this.blobs.push(new OrganicBlob(this.layer));
+                    this.blobs.push(new OrganicBlob());
                 }
             }
 
+            handleResize() {
+                // LÍMITE INTELIGENTE DE RESOLUCIÓN (Evita caída de FPS en Retina/Móviles)
+                const isMobile = window.innerWidth < 768;
+                const maxDpr = isMobile ? 1.25 : 1.5; 
+                this.dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+                
+                this.canvas.width = window.innerWidth * this.dpr;
+                this.canvas.height = window.innerHeight * this.dpr;
+                this.ctx.scale(this.dpr, this.dpr);
+                
+                this.blobs.forEach(blob => blob.handleResize());
+            }
+
             animate(currentTime) {
+                // Limpiar frame
+                this.ctx.clearRect(0, 0, this.canvas.width / this.dpr, this.canvas.height / this.dpr);
+                
+                // Efecto mezcla brillante interno al chocar blobs
+                this.ctx.globalCompositeOperation = 'screen';
+                
                 for (let i = 0; i < this.blobs.length; i++) {
-                    this.blobs[i].update(currentTime);
+                    this.blobs[i].update(currentTime, this.ctx);
                 }
                 requestAnimationFrame(this.animate);
             }
@@ -292,7 +324,7 @@
                 window.addEventListener('resize', () => {
                     clearTimeout(resizeTimer);
                     resizeTimer = setTimeout(() => {
-                        this.blobs.forEach(blob => blob.handleResize());
+                        this.handleResize();
                     }, 250);
                 });
             }
@@ -357,10 +389,14 @@
             for (const [cssVariable, colorValue] of Object.entries(newColors)) {
                 rootElement.style.setProperty(cssVariable, colorValue);
             }
+            
+            // Actualizar el motor de Canvas para que reconozca los nuevos colores al instante
+            updateCanvasColors();
         });
 
     </script>
 </body>
 </html>
+
 
 
