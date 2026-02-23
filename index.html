@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xat Lava Blobs</title>
+    <title>Premium Liquid Morphing Blobs</title>
     <style>
         /* =========================================
            VARIABLES DE COLOR (PALETA ESTRICTA)
@@ -51,49 +51,32 @@
             height: 100dvh;
             pointer-events: none;
             z-index: 1;
-            /* Opacidad extremadamente baja para romper el banding sin ensuciar la imagen */
             opacity: 0.03; 
-            /* Ruido SVG procesado en una sola pasada para máximo rendimiento */
             background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
         }
 
         /* =========================================
-           CONTENEDOR DE METABALLS Y FILTRO SVG
+           CONTENEDOR VECTORIAL (COMPATIBLE ANDROID/IOS)
            ========================================= */
-        #blobs-layer {
+        #metaballs-svg {
             position: absolute;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
             height: 100dvh;
-            filter: url('#gooey-filter');
-            -webkit-filter: url('#gooey-filter');
             z-index: 2;
+            overflow: visible; /* Permite que las formas respiren fuera de los bordes */
+            pointer-events: none;
         }
 
         /* =========================================
-           ESTILO DE LAS FORMAS (BLOBS)
+           ESTILO DE LAS FORMAS VECTORIALES (BLOBS)
            ========================================= */
         .blob {
-            position: absolute;
-            border-radius: 50%;
-            transform-origin: center center;
-            will-change: transform;
-            
-            background: radial-gradient(circle at 30% 30%, var(--glow-light) 0%, var(--planet-cyan) 80%);
+            fill: url(#blob-grad); /* Extrae el gradiente desde el SVG */
             mix-blend-mode: screen;
-        }
-
-        /* =========================================
-           ESTILO DEL SVG ESTRUCTURAL
-           ========================================= */
-        .svg-defs {
-            position: fixed;
-            pointer-events: none;
-            z-index: -1;
-            top: 0;
-            left: 0;
+            will-change: transform;
         }
 
         /* =========================================
@@ -118,6 +101,7 @@
             -webkit-backdrop-filter: blur(4px);
             transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
             -webkit-tap-highlight-color: transparent;
+            pointer-events: auto;
         }
 
         #color-switch:hover, #color-switch:active {
@@ -134,6 +118,7 @@
             display: block;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            pointer-events: auto;
         }
 
         #decorative-logo {
@@ -154,17 +139,23 @@
 </head>
 <body>
 
-    <!-- CAPA DE RUIDO PARA ELIMINAR BANDING -->
+    <!-- CAPA DE RUIDO -->
     <div id="noise-overlay"></div>
 
-    <!-- FILTRO SVG: LÍQUIDO PURO Y ANTI-PIXELACIÓN
-         ⚠️ Correcciones High-DPI implementadas:
-         - shape-rendering="geometricPrecision"
-         - filterUnits y primitiveUnits ="userSpaceOnUse" (Previene pixelación en movimiento)
-         - stdDeviation ajustado para máxima suavidad sin perder forma
+    <!-- 
+      ⚠️ SOLUCIÓN ANDROID/IOS: RENDERIZADO VECTORIAL NATIVO
+      En lugar de usar un filtro SVG sobre HTML <div>s (lo que causa fallos en Android),
+      ahora TODO sucede dentro de la etiqueta <svg> usando círculos vectoriales (<circle>).
+      Esto garantiza una compatibilidad cruzada impecable y un renderizado retina suave.
     -->
-    <svg class="svg-defs" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" shape-rendering="geometricPrecision">
+    <svg id="metaballs-svg" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
         <defs>
+            <!-- Gradiente definido internamente para los círculos, lee las variables CSS dinámicas -->
+            <radialGradient id="blob-grad" cx="30%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="var(--glow-light)" />
+                <stop offset="80%" stop-color="var(--planet-cyan)" />
+            </radialGradient>
+
             <filter id="gooey-filter" x="-50%" y="-50%" width="200%" height="200%" 
                     filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" 
                     color-interpolation-filters="sRGB">
@@ -176,10 +167,12 @@
                                        0 0 0 30 -12" />
             </filter>
         </defs>
-    </svg>
 
-    <!-- Capa donde ocurre la magia líquida -->
-    <div id="blobs-layer"></div>
+        <!-- Capa vectorial donde ocurren las fusiones -->
+        <g id="blobs-layer" filter="url(#gooey-filter)">
+            <!-- Los círculos se inyectan dinámicamente aquí mediante JS -->
+        </g>
+    </svg>
 
     <!-- ELEMENTOS UI -->
     <button id="color-switch">Switch</button>
@@ -191,18 +184,23 @@
     <script>
         /**
          * =========================================
-         * MOTOR ORGÁNICO Y CINEMATOGRÁFICO
+         * MOTOR ORGÁNICO VECTORIAL
          * =========================================
          */
 
         class OrganicBlob {
             constructor(container) {
                 this.container = container;
-                this.element = document.createElement('div');
+                // Creamos un elemento SVG real en lugar de un div
+                this.element = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                 this.element.classList.add('blob');
                 
                 this.baseOpacity = 0.6 + Math.random() * 0.4;
                 this.element.style.opacity = this.baseOpacity;
+                
+                // Coordenadas base centradas (el translate hará el movimiento)
+                this.element.setAttribute('cx', '0');
+                this.element.setAttribute('cy', '0');
 
                 this.container.appendChild(this.element);
                 this.initSize();
@@ -227,19 +225,17 @@
             initSize() {
                 const vMin = Math.min(window.innerWidth, window.innerHeight);
                 this.size = vMin * (0.4 + Math.random() * 0.5);
-                
-                this.element.style.width = `${this.size}px`;
-                this.element.style.height = `${this.size}px`;
-                this.element.style.margin = `-${this.size / 2}px 0 0 -${this.size / 2}px`;
+                // En SVG asignamos el radio en lugar de width/height
+                this.element.setAttribute('r', this.size / 2);
             }
 
             update(time) {
                 const x = this.baseX + Math.sin(time * this.speedX + this.phaseX) * this.radiusX;
                 const y = this.baseY + Math.cos(time * this.speedY + this.phaseY) * this.radiusY;
-
                 const scale = 0.9 + Math.sin(time * this.scaleSpeed + this.scalePhase) * 0.3;
 
-                this.element.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+                // Movemos usando transformaciones nativas de SVG
+                this.element.setAttribute('transform', `translate(${x}, ${y}) scale(${scale})`);
             }
 
             handleResize() {
@@ -350,5 +346,6 @@
     </script>
 </body>
 </html>
+
 
 
