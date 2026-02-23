@@ -763,7 +763,7 @@
 
                 <!-- Lado de la Computadora -->
                 <div class="side">
-                    <span class="side-label" id="lbl-pc">PC</span>
+                    <span class="side-label" id="lbl-pc">BOT</span>
                     <div class="weapon-display" id="computer-display">
                         <span style="font-size: 2.5rem; color: var(--text-muted); opacity: 0.5;">?</span>
                     </div>
@@ -845,7 +845,7 @@
                 paper: "Papel",
                 scissors: "Tijera",
                 you: "TÚ",
-                pc: "PC",
+                pc: "BOT",
                 playAgain: "JUGAR DE NUEVO",
                 won: "Ganadas:",
                 lost: "Perdidas:",
@@ -863,7 +863,7 @@
                 paper: "Paper",
                 scissors: "Scissors",
                 you: "YOU",
-                pc: "PC",
+                pc: "BOT",
                 playAgain: "PLAY AGAIN",
                 won: "Won:",
                 lost: "Lost:",
@@ -1085,7 +1085,7 @@
                     resultText.innerText = t.resWin;
                     resultText.className = 'text-win';
                     
-                    // Jugador Gana: Jugador Verde, PC Rojo
+                    // Jugador Gana: Jugador Verde, BOT Rojo
                     playerDisplay.style.boxShadow = '0 0 30px rgba(76, 175, 80, 0.6)';
                     playerDisplay.style.borderColor = 'var(--win-color)';
                     computerDisplay.style.boxShadow = '0 0 30px rgba(255, 75, 75, 0.6)';
@@ -1103,7 +1103,7 @@
                     resultText.innerText = t.resLose;
                     resultText.className = 'text-lose';
                     
-                    // Jugador Pierde: Jugador Rojo, PC Verde
+                    // Jugador Pierde: Jugador Rojo, BOT Verde
                     playerDisplay.style.boxShadow = '0 0 30px rgba(255, 75, 75, 0.6)';
                     playerDisplay.style.borderColor = 'var(--lose-color)';
                     computerDisplay.style.boxShadow = '0 0 30px rgba(76, 175, 80, 0.6)';
@@ -1160,6 +1160,7 @@
     </script>
 </body>
 </html>
+
 
 
 
