@@ -16,7 +16,16 @@
             --header-padding: 65px; /* Espacio para el banner superior invisible */
         }
 
-        body, html {
+        /* Se separó html y body para evitar la duplicación del padding y la línea en el degradado */
+        html {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-top);
+            background: linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-bottom) 100%);
+            background-attachment: fixed; /* Evita cualquier corte en el fondo */
+        }
+
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -24,8 +33,6 @@
             /* Padding superior solicitado: genera el espacio sin bloque visual */
             padding-top: var(--header-padding);
             box-sizing: border-box;
-            background: var(--bg-top);
-            background: linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-bottom) 100%);
             overflow: hidden; 
             font-family: 'Courier New', Consolas, monospace;
             user-select: none;
@@ -41,8 +48,7 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            /* Optimización: Fondo base para alpha: false */
-            background-color: var(--bg-top);
+            /* Se omite background-color sólido para dejar ver el perfecto gradiente CSS */
         }
 
         /* ==========================================
@@ -144,36 +150,30 @@
          * ==========================================
          */
         const canvas = document.getElementById('matrixCanvas');
-        // Optimización agresiva: alpha en false elimina la composición de transparencia en el navegador base
-        const ctx = canvas.getContext('2d', { alpha: false });
+        // Usamos alpha normal (transparente) para evitar el "banding" del color al desvanecer
+        const ctx = canvas.getContext('2d');
 
         let width = window.innerWidth;
         let height = window.innerHeight;
         let columns = [];
-        let bgGradient; 
-        let solidBg;
         let isMobile = width <= 768; // Bandera de rendimiento
 
         const THEMES = {
             blue: {
                 trail: '#1FA3C6', glow: '#6FE3FF', glitch: 'rgba(111, 227, 255, 0.9)', xatWord: '#FFFFFF', head: 'rgba(255, 255, 255, 0.8)',
-                bgTop: '#020417', bgBottom: '#102B6E', vignette: '#020417',
-                bgFadeTop: 'rgba(2, 4, 23, 0.08)', bgFadeBottom: 'rgba(16, 43, 110, 0.08)'
+                bgTop: '#020417', bgBottom: '#102B6E', vignette: '#020417'
             },
             green: {
                 trail: '#00FF41', glow: '#8FFF8F', glitch: 'rgba(143, 255, 143, 0.9)', xatWord: '#FFFFFF', head: 'rgba(255, 255, 255, 0.8)',
-                bgTop: '#000B00', bgBottom: '#002B00', vignette: '#000B00',
-                bgFadeTop: 'rgba(0, 11, 0, 0.08)', bgFadeBottom: 'rgba(0, 43, 0, 0.08)'
+                bgTop: '#000B00', bgBottom: '#002B00', vignette: '#000B00'
             },
             yellow: {
                 trail: '#FFC107', glow: '#FFE082', glitch: 'rgba(255, 224, 130, 0.9)', xatWord: '#FFFFFF', head: 'rgba(255, 255, 255, 0.8)',
-                bgTop: '#0F0B00', bgBottom: '#332600', vignette: '#0F0B00',
-                bgFadeTop: 'rgba(15, 11, 0, 0.08)', bgFadeBottom: 'rgba(51, 38, 0, 0.08)'
+                bgTop: '#0F0B00', bgBottom: '#332600', vignette: '#0F0B00'
             },
             purple: {
                 trail: '#B026FF', glow: '#E08FFF', glitch: 'rgba(224, 143, 255, 0.9)', xatWord: '#FFFFFF', head: 'rgba(255, 255, 255, 0.8)',
-                bgTop: '#0A0011', bgBottom: '#220033', vignette: '#0A0011',
-                bgFadeTop: 'rgba(10, 0, 17, 0.08)', bgFadeBottom: 'rgba(34, 0, 51, 0.08)'
+                bgTop: '#0A0011', bgBottom: '#220033', vignette: '#0A0011'
             }
         };
 
@@ -202,24 +202,10 @@
                 btn.style.boxShadow = `0 0 15px ${activeColors.glow}`;
             }
 
-            buildGradients();
-
+            // Simplemente limpiamos el canvas al cambiar de tema, el fondo CSS hace el resto.
             if (ctx && isFinite(width) && isFinite(height)) {
-                ctx.fillStyle = solidBg;
-                ctx.fillRect(0, 0, width, height);
+                ctx.clearRect(0, 0, width, height);
             }
-        }
-
-        function buildGradients() {
-            const safeHeight = (isFinite(height) && height > 0) ? height : window.innerHeight;
-            
-            bgGradient = ctx.createLinearGradient(0, 0, 0, safeHeight);
-            bgGradient.addColorStop(0, activeColors.bgFadeTop);
-            bgGradient.addColorStop(1, activeColors.bgFadeBottom);
-
-            solidBg = ctx.createLinearGradient(0, 0, 0, safeHeight);
-            solidBg.addColorStop(0, activeColors.bgTop);
-            solidBg.addColorStop(1, activeColors.bgBottom);
         }
 
         const CHARS = 'ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789<>/-+=*#@';
@@ -308,7 +294,6 @@
             height = canvas.height = window.innerHeight;
             isMobile = width <= 768; // Actualizar bandera
             columns = [];
-            buildGradients();
 
             let currentX = 0;
             while (currentX < width) {
@@ -324,11 +309,12 @@
         }
 
         function animate() {
-            if (bgGradient) {
-                ctx.fillStyle = bgGradient;
-                ctx.shadowBlur = 0; 
-                ctx.fillRect(0, 0, width, height);
-            }
+            // En lugar de colorear el fondo repetidamente, simplemente desvanecemos a transparente.
+            // Esto permite que el gradiente de fondo real (hecho en CSS puro) se vea a la perfección.
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.fillStyle = `rgba(0, 0, 0, ${isMobile ? 0.1 : 0.08})`; 
+            ctx.fillRect(0, 0, width, height);
+            ctx.globalCompositeOperation = 'source-over';
             
             for (let i = 0; i < columns.length; i++) {
                 columns[i].draw(ctx);
@@ -338,8 +324,7 @@
 
         window.addEventListener('resize', () => {
             initMatrix();
-            ctx.fillStyle = solidBg;
-            ctx.fillRect(0, 0, width, height);
+            ctx.clearRect(0, 0, width, height);
         });
 
         initMatrix(); 
