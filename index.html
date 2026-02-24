@@ -24,6 +24,7 @@
             /* Padding superior solicitado: genera el espacio sin bloque visual */
             padding-top: var(--header-padding);
             box-sizing: border-box;
+            background: var(--bg-top);
             background: linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-bottom) 100%);
             overflow: hidden; 
             font-family: 'Courier New', Consolas, monospace;
@@ -40,6 +41,8 @@
             width: 100%;
             height: 100%;
             z-index: 1;
+            /* Optimización: Fondo base para alpha: false */
+            background-color: var(--bg-top);
         }
 
         /* ==========================================
@@ -66,32 +69,8 @@
         }
 
         /* ==========================================
-         * UI ADICIONAL (LOGO Y SWITCHER)
+         * UI ADICIONAL (SWITCHER)
          * ========================================== */
-
-        /* Logo SVG flotante inferior */
-        .logo-link {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            filter: drop-shadow(0 0 10px var(--glow-color));
-            opacity: 0.8;
-            cursor: pointer;
-        }
-
-        .logo-link:hover {
-            transform: translateX(-50%) scale(1.1);
-            filter: drop-shadow(0 0 25px var(--glow-color));
-            opacity: 1;
-        }
-
-        .logo-link img {
-            height: 45px;
-            width: auto;
-        }
 
         /* Selector de Temas: Empujado hacia abajo por el padding superior */
         .theme-switcher {
@@ -139,7 +118,6 @@
         /* Optimización para Móviles */
         @media (max-width: 768px) {
             :root { --header-padding: 50px; }
-            .logo-link img { height: 35px; }
             #theme-toggle-btn { width: 38px; height: 38px; }
         }
 
@@ -156,11 +134,6 @@
         <button id="theme-toggle-btn" onclick="rotateTheme()" title="Cambiar color Matrix"></button>
     </div>
 
-    <!-- Logo SVG con enlace -->
-    <a href="https://xat.com" target="_blank" class="logo-link">
-        <img src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/ablogo.svg" alt="xat logo">
-    </a>
-
     <!-- Lienzo de renderizado Matrix -->
     <canvas id="matrixCanvas"></canvas>
 
@@ -171,13 +144,15 @@
          * ==========================================
          */
         const canvas = document.getElementById('matrixCanvas');
-        const ctx = canvas.getContext('2d');
+        // Optimización agresiva: alpha en false elimina la composición de transparencia en el navegador base
+        const ctx = canvas.getContext('2d', { alpha: false });
 
         let width = window.innerWidth;
         let height = window.innerHeight;
         let columns = [];
         let bgGradient; 
-        let solidBg;    
+        let solidBg;
+        let isMobile = width <= 768; // Bandera de rendimiento
 
         const THEMES = {
             blue: {
@@ -264,13 +239,15 @@
             }
 
             getRandomChar() {
-                return CHARS.charAt(Math.floor(Math.random() * CHARS.length));
+                // Operador bit a bit '~~' en lugar de Math.floor para mayor velocidad
+                return CHARS.charAt(~~(Math.random() * CHARS.length));
             }
 
             draw(ctx) {
                 this.y += this.speed;
-                let currentRow = Math.floor(this.y / this.fontSize);
-                let prevRow = Math.floor(this.prevY / this.fontSize);
+                // Uso de operador bit a bit para optimización
+                let currentRow = ~~(this.y / this.fontSize);
+                let prevRow = ~~(this.prevY / this.fontSize);
 
                 if (currentRow > prevRow) {
                     ctx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
@@ -279,7 +256,7 @@
                     if (this.isHighlight) {
                         ctx.fillStyle = activeColors.xatWord;
                         ctx.shadowColor = activeColors.glow;
-                        ctx.shadowBlur = 15;
+                        ctx.shadowBlur = isMobile ? 5 : 15; // Menos glow en móviles para +FPS
                     } else {
                         ctx.fillStyle = activeColors.trail;
                         ctx.shadowBlur = 0;
@@ -287,7 +264,7 @@
                     ctx.fillText(this.text, this.x, prevRow * this.fontSize);
 
                     if (this.wordIndex === -1 && Math.random() < 0.04 && prevRow > 5) {
-                        let glitchRow = prevRow - Math.floor(Math.random() * 8);
+                        let glitchRow = prevRow - ~~(Math.random() * 8);
                         ctx.fillStyle = activeColors.glitch;
                         ctx.shadowBlur = 0;
                         ctx.fillText(this.getRandomChar(), this.x, glitchRow * this.fontSize);
@@ -306,11 +283,11 @@
                     
                     ctx.fillStyle = activeColors.head;
                     ctx.shadowColor = activeColors.glow;
-                    ctx.shadowBlur = 12;
+                    ctx.shadowBlur = isMobile ? 3 : 12; // Menos glow en móviles
                     
                     if(Math.random() < 0.1 || this.isHighlight) {
                         ctx.fillStyle = '#FFFFFF';
-                        ctx.shadowBlur = 20;
+                        ctx.shadowBlur = isMobile ? 8 : 20;
                     }
 
                     ctx.fillText(this.text, this.x, currentRow * this.fontSize);
@@ -329,6 +306,7 @@
         function initMatrix() {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
+            isMobile = width <= 768; // Actualizar bandera
             columns = [];
             buildGradients();
 
@@ -336,7 +314,10 @@
             while (currentX < width) {
                 let sizeCategory = Math.random();
                 let fontSize = sizeCategory < 0.2 ? 12 : (sizeCategory < 0.8 ? 18 : 26);
-                currentX += fontSize;
+                
+                // Optimización: Incrementar el espacio entre columnas en móviles para reducir cálculos
+                currentX += isMobile ? fontSize * 1.3 : fontSize;
+                
                 columns.push(new Column(currentX - (fontSize/2), fontSize));
             }
             columns.sort((a, b) => a.fontSize - b.fontSize);
