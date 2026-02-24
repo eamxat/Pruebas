@@ -47,6 +47,7 @@
             display: block;
             width: 100%;
             height: 100%;
+            pointer-events: none; /* Asegura que los clicks pasen al chat de xat */
         }
 
         #trailCanvas {
@@ -151,7 +152,6 @@
          * CONFIGURACIÓN CORE Y VARIABLES
          * ==========================================
          */
-        // Sistema de Doble Lienzo para evitar que las letras brillantes se desvanezcan prematuramente
         const trailCanvas = document.getElementById('trailCanvas');
         const trailCtx = trailCanvas.getContext('2d');
         
@@ -183,7 +183,16 @@
         };
 
         const themeOrder = ['blue', 'green', 'yellow', 'purple'];
-        let currentTheme = localStorage.getItem('matrixTheme') || 'blue';
+        let currentTheme = 'blue';
+
+        // Manejo Seguro del LocalStorage (Solución al fallo de iFrames de terceros como xat)
+        try {
+            currentTheme = localStorage.getItem('matrixTheme') || 'blue';
+        } catch (e) {
+            console.warn("Seguridad del navegador previene localStorage en iframe. Usando tema por defecto.");
+            currentTheme = 'blue';
+        }
+
         let activeColors = THEMES[currentTheme];
 
         function rotateTheme() {
@@ -194,7 +203,11 @@
         function setTheme(themeName) {
             currentTheme = themeName;
             activeColors = THEMES[themeName];
-            localStorage.setItem('matrixTheme', themeName);
+            
+            // Intento seguro de guardar el tema
+            try {
+                localStorage.setItem('matrixTheme', themeName);
+            } catch (e) { }
 
             document.documentElement.style.setProperty('--bg-top', activeColors.bgTop);
             document.documentElement.style.setProperty('--bg-bottom', activeColors.bgBottom);
@@ -207,7 +220,6 @@
                 btn.style.boxShadow = `0 0 15px ${activeColors.glow}`;
             }
 
-            // Limpiamos ambos lienzos al cambiar de tema
             if (trailCtx && headCtx && isFinite(width) && isFinite(height)) {
                 trailCtx.clearRect(0, 0, width, height);
                 headCtx.clearRect(0, 0, width, height);
@@ -223,7 +235,6 @@
                 this.y = (Math.random() * 2 - 1) * height; 
                 this.prevY = this.y;
                 
-                // Velocidad equilibrada: Lenta y relajante, pero constante.
                 const baseSpeed = this.fontSize * 0.08; 
                 this.speed = baseSpeed + (Math.random() * baseSpeed * 0.5);
                 
@@ -242,7 +253,6 @@
                 let currentRow = ~~(this.y / this.fontSize);
                 let prevRow = ~~(this.prevY / this.fontSize);
 
-                // 1. DIBUJAR CABEZA (Siempre nítida, se dibuja cada frame en el canvas superior)
                 headCtx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
                 headCtx.textAlign = 'center';
 
@@ -261,7 +271,6 @@
                 }
                 headCtx.fillText(this.text, this.x, currentRow * this.fontSize);
 
-                // 2. LOGICA DE ESTELA (Sólo se dibuja cuando la cabeza avanza de fila)
                 if (currentRow > prevRow) {
                     trailCtx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
                     trailCtx.textAlign = 'center';
@@ -274,10 +283,8 @@
                         trailCtx.fillStyle = activeColors.trail;
                         trailCtx.shadowBlur = 0;
                     }
-                    // Imprime la estela en la posición anterior
                     trailCtx.fillText(this.text, this.x, prevRow * this.fontSize);
 
-                    // Actualiza el texto para la siguiente fila
                     if (this.wordIndex >= 0 && this.wordIndex < this.targetWord.length) {
                         this.text = this.targetWord[this.wordIndex];
                         this.isHighlight = true;
@@ -291,7 +298,6 @@
                     this.prevY = this.y;
                 }
 
-                // 3. EFECTO GLITCH EN LA ESTELA (Cambio aleatorio de letras previas)
                 if (Math.random() < 0.03 && currentRow > 5) {
                     let glitchRow = currentRow - ~~(Math.random() * 10) - 1;
                     trailCtx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
@@ -301,7 +307,6 @@
                     trailCtx.fillText(this.getRandomChar(), this.x, glitchRow * this.fontSize);
                 }
 
-                // Reseteo al llegar al fondo
                 if (this.y > height + 100 && Math.random() > 0.95) {
                     this.y = 0;
                     this.prevY = 0;
@@ -314,6 +319,13 @@
         function initMatrix() {
             width = window.innerWidth;
             height = window.innerHeight;
+            
+            // Protección contra inicio prematuro de iFrame
+            if (width === 0 || height === 0) {
+                setTimeout(initMatrix, 50);
+                return;
+            }
+
             trailCanvas.width = headCanvas.width = width;
             trailCanvas.height = headCanvas.height = height;
             isMobile = width <= 768; 
@@ -324,7 +336,6 @@
                 let sizeCategory = Math.random();
                 let fontSize = sizeCategory < 0.2 ? 12 : (sizeCategory < 0.8 ? 18 : 26);
                 
-                // Densidad Alta: Se superponen las columnas inteligentemente
                 currentX += isMobile ? fontSize * 0.9 : fontSize * 0.55;
                 columns.push(new Column(currentX - (fontSize/2), fontSize));
             }
@@ -332,13 +343,14 @@
         }
 
         function animate() {
-            // Desvanece LENTAMENTE el canvas de las estelas para dejar el rastro clásico
+            // Protección adicional para prevenir fallos antes del resize
+            if(width === 0) return requestAnimationFrame(animate);
+
             trailCtx.globalCompositeOperation = 'destination-out';
             trailCtx.fillStyle = `rgba(0, 0, 0, ${isMobile ? 0.05 : 0.03})`; 
             trailCtx.fillRect(0, 0, width, height);
             trailCtx.globalCompositeOperation = 'source-over';
             
-            // Borra POR COMPLETO el canvas de las cabezas cada frame (mantiene el brillo intacto)
             headCtx.clearRect(0, 0, width, height);
 
             for (let i = 0; i < columns.length; i++) {
@@ -349,8 +361,10 @@
 
         window.addEventListener('resize', () => {
             initMatrix();
-            trailCtx.clearRect(0, 0, width, height);
-            headCtx.clearRect(0, 0, width, height);
+            if(trailCtx && headCtx && width > 0) {
+                trailCtx.clearRect(0, 0, width, height);
+                headCtx.clearRect(0, 0, width, height);
+            }
         });
 
         initMatrix(); 
@@ -377,5 +391,6 @@
     </script>
 </body>
 </html>
+
 
 
