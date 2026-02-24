@@ -16,13 +16,12 @@
             --header-padding: 65px; /* Espacio para el banner superior invisible */
         }
 
-        /* Se separó html y body para evitar la duplicación del padding y la línea en el degradado */
         html {
             width: 100%;
             height: 100%;
             background: var(--bg-top);
             background: linear-gradient(to bottom, var(--bg-top) 0%, var(--bg-bottom) 100%);
-            background-attachment: fixed; /* Evita cualquier corte en el fondo */
+            background-attachment: fixed;
         }
 
         body {
@@ -30,7 +29,6 @@
             padding: 0;
             width: 100%;
             height: 100%;
-            /* Padding superior solicitado: genera el espacio sin bloque visual */
             padding-top: var(--header-padding);
             box-sizing: border-box;
             overflow: hidden; 
@@ -39,23 +37,29 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Lienzo principal: Comienza desde el borde real (top: 0) para no cortar el efecto */
-        canvas {
+        /* ==========================================
+         * LIENZOS DUALES (Efecto Matrix Auténtico)
+         * ========================================== */
+        .matrix-canvas {
             position: fixed;
             top: 0;
             left: 0;
             display: block;
             width: 100%;
             height: 100%;
-            z-index: 1;
-            /* Se omite background-color sólido para dejar ver el perfecto gradiente CSS */
+        }
+
+        #trailCanvas {
+            z-index: 1; /* Estelas de fondo */
+        }
+
+        #headCanvas {
+            z-index: 2; /* Cabezas brillantes siempre nítidas al frente */
         }
 
         /* ==========================================
          * EFECTOS CINEMATOGRÁFICOS Y UI (OVERLAYS)
          * ========================================== */
-        
-        /* Los efectos visuales ignoran el padding para cubrir toda la pantalla */
         .vignette {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -77,8 +81,6 @@
         /* ==========================================
          * UI ADICIONAL (SWITCHER)
          * ========================================== */
-
-        /* Selector de Temas: Empujado hacia abajo por el padding superior */
         .theme-switcher {
             position: fixed;
             top: calc(var(--header-padding) + 20px);
@@ -121,7 +123,6 @@
             100% { transform: scale(1.5); opacity: 0; }
         }
 
-        /* Optimización para Móviles */
         @media (max-width: 768px) {
             :root { --header-padding: 50px; }
             #theme-toggle-btn { width: 38px; height: 38px; }
@@ -140,8 +141,9 @@
         <button id="theme-toggle-btn" onclick="rotateTheme()" title="Cambiar color Matrix"></button>
     </div>
 
-    <!-- Lienzo de renderizado Matrix -->
-    <canvas id="matrixCanvas"></canvas>
+    <!-- Lienzos de renderizado Dual Matrix -->
+    <canvas id="trailCanvas" class="matrix-canvas"></canvas>
+    <canvas id="headCanvas" class="matrix-canvas"></canvas>
 
     <script>
         /**
@@ -149,14 +151,17 @@
          * CONFIGURACIÓN CORE Y VARIABLES
          * ==========================================
          */
-        const canvas = document.getElementById('matrixCanvas');
-        // Usamos alpha normal (transparente) para evitar el "banding" del color al desvanecer
-        const ctx = canvas.getContext('2d');
+        // Sistema de Doble Lienzo para evitar que las letras brillantes se desvanezcan prematuramente
+        const trailCanvas = document.getElementById('trailCanvas');
+        const trailCtx = trailCanvas.getContext('2d');
+        
+        const headCanvas = document.getElementById('headCanvas');
+        const headCtx = headCanvas.getContext('2d');
 
         let width = window.innerWidth;
         let height = window.innerHeight;
         let columns = [];
-        let isMobile = width <= 768; // Bandera de rendimiento
+        let isMobile = width <= 768; 
 
         const THEMES = {
             blue: {
@@ -202,9 +207,10 @@
                 btn.style.boxShadow = `0 0 15px ${activeColors.glow}`;
             }
 
-            // Simplemente limpiamos el canvas al cambiar de tema, el fondo CSS hace el resto.
-            if (ctx && isFinite(width) && isFinite(height)) {
-                ctx.clearRect(0, 0, width, height);
+            // Limpiamos ambos lienzos al cambiar de tema
+            if (trailCtx && headCtx && isFinite(width) && isFinite(height)) {
+                trailCtx.clearRect(0, 0, width, height);
+                headCtx.clearRect(0, 0, width, height);
             }
         }
 
@@ -216,8 +222,11 @@
                 this.fontSize = fontSize;
                 this.y = (Math.random() * 2 - 1) * height; 
                 this.prevY = this.y;
-                const baseSpeed = this.fontSize * 0.15;
+                
+                // Velocidad equilibrada: Lenta y relajante, pero constante.
+                const baseSpeed = this.fontSize * 0.08; 
                 this.speed = baseSpeed + (Math.random() * baseSpeed * 0.5);
+                
                 this.targetWord = "XAT.COM";
                 this.wordIndex = -1;
                 this.isHighlight = false;
@@ -225,37 +234,50 @@
             }
 
             getRandomChar() {
-                // Operador bit a bit '~~' en lugar de Math.floor para mayor velocidad
                 return CHARS.charAt(~~(Math.random() * CHARS.length));
             }
 
-            draw(ctx) {
+            draw(trailCtx, headCtx) {
                 this.y += this.speed;
-                // Uso de operador bit a bit para optimización
                 let currentRow = ~~(this.y / this.fontSize);
                 let prevRow = ~~(this.prevY / this.fontSize);
 
+                // 1. DIBUJAR CABEZA (Siempre nítida, se dibuja cada frame en el canvas superior)
+                headCtx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
+                headCtx.textAlign = 'center';
+
+                if (this.isHighlight) {
+                    headCtx.fillStyle = activeColors.xatWord;
+                    headCtx.shadowColor = activeColors.glow;
+                    headCtx.shadowBlur = isMobile ? 5 : 15;
+                } else {
+                    headCtx.fillStyle = activeColors.head;
+                    headCtx.shadowColor = activeColors.glow;
+                    headCtx.shadowBlur = isMobile ? 3 : 12;
+                    if(Math.random() < 0.1) {
+                        headCtx.fillStyle = '#FFFFFF';
+                        headCtx.shadowBlur = isMobile ? 8 : 20;
+                    }
+                }
+                headCtx.fillText(this.text, this.x, currentRow * this.fontSize);
+
+                // 2. LOGICA DE ESTELA (Sólo se dibuja cuando la cabeza avanza de fila)
                 if (currentRow > prevRow) {
-                    ctx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
-                    ctx.textAlign = 'center';
+                    trailCtx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
+                    trailCtx.textAlign = 'center';
 
                     if (this.isHighlight) {
-                        ctx.fillStyle = activeColors.xatWord;
-                        ctx.shadowColor = activeColors.glow;
-                        ctx.shadowBlur = isMobile ? 5 : 15; // Menos glow en móviles para +FPS
+                        trailCtx.fillStyle = activeColors.xatWord;
+                        trailCtx.shadowColor = activeColors.glow;
+                        trailCtx.shadowBlur = isMobile ? 5 : 10; 
                     } else {
-                        ctx.fillStyle = activeColors.trail;
-                        ctx.shadowBlur = 0;
+                        trailCtx.fillStyle = activeColors.trail;
+                        trailCtx.shadowBlur = 0;
                     }
-                    ctx.fillText(this.text, this.x, prevRow * this.fontSize);
+                    // Imprime la estela en la posición anterior
+                    trailCtx.fillText(this.text, this.x, prevRow * this.fontSize);
 
-                    if (this.wordIndex === -1 && Math.random() < 0.04 && prevRow > 5) {
-                        let glitchRow = prevRow - ~~(Math.random() * 8);
-                        ctx.fillStyle = activeColors.glitch;
-                        ctx.shadowBlur = 0;
-                        ctx.fillText(this.getRandomChar(), this.x, glitchRow * this.fontSize);
-                    }
-
+                    // Actualiza el texto para la siguiente fila
                     if (this.wordIndex >= 0 && this.wordIndex < this.targetWord.length) {
                         this.text = this.targetWord[this.wordIndex];
                         this.isHighlight = true;
@@ -266,20 +288,20 @@
                         this.isHighlight = false;
                         if (Math.random() < 0.002) this.wordIndex = 0;
                     }
-                    
-                    ctx.fillStyle = activeColors.head;
-                    ctx.shadowColor = activeColors.glow;
-                    ctx.shadowBlur = isMobile ? 3 : 12; // Menos glow en móviles
-                    
-                    if(Math.random() < 0.1 || this.isHighlight) {
-                        ctx.fillStyle = '#FFFFFF';
-                        ctx.shadowBlur = isMobile ? 8 : 20;
-                    }
-
-                    ctx.fillText(this.text, this.x, currentRow * this.fontSize);
                     this.prevY = this.y;
                 }
 
+                // 3. EFECTO GLITCH EN LA ESTELA (Cambio aleatorio de letras previas)
+                if (Math.random() < 0.03 && currentRow > 5) {
+                    let glitchRow = currentRow - ~~(Math.random() * 10) - 1;
+                    trailCtx.font = `bold ${this.fontSize}px 'MS Gothic', monospace`;
+                    trailCtx.textAlign = 'center';
+                    trailCtx.fillStyle = activeColors.glitch;
+                    trailCtx.shadowBlur = 0;
+                    trailCtx.fillText(this.getRandomChar(), this.x, glitchRow * this.fontSize);
+                }
+
+                // Reseteo al llegar al fondo
                 if (this.y > height + 100 && Math.random() > 0.95) {
                     this.y = 0;
                     this.prevY = 0;
@@ -290,9 +312,11 @@
         }
 
         function initMatrix() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            isMobile = width <= 768; // Actualizar bandera
+            width = window.innerWidth;
+            height = window.innerHeight;
+            trailCanvas.width = headCanvas.width = width;
+            trailCanvas.height = headCanvas.height = height;
+            isMobile = width <= 768; 
             columns = [];
 
             let currentX = 0;
@@ -300,31 +324,33 @@
                 let sizeCategory = Math.random();
                 let fontSize = sizeCategory < 0.2 ? 12 : (sizeCategory < 0.8 ? 18 : 26);
                 
-                // Optimización: Incrementar el espacio entre columnas en móviles para reducir cálculos
-                currentX += isMobile ? fontSize * 1.3 : fontSize;
-                
+                // Densidad Alta: Se superponen las columnas inteligentemente
+                currentX += isMobile ? fontSize * 0.9 : fontSize * 0.55;
                 columns.push(new Column(currentX - (fontSize/2), fontSize));
             }
             columns.sort((a, b) => a.fontSize - b.fontSize);
         }
 
         function animate() {
-            // En lugar de colorear el fondo repetidamente, simplemente desvanecemos a transparente.
-            // Esto permite que el gradiente de fondo real (hecho en CSS puro) se vea a la perfección.
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.fillStyle = `rgba(0, 0, 0, ${isMobile ? 0.1 : 0.08})`; 
-            ctx.fillRect(0, 0, width, height);
-            ctx.globalCompositeOperation = 'source-over';
+            // Desvanece LENTAMENTE el canvas de las estelas para dejar el rastro clásico
+            trailCtx.globalCompositeOperation = 'destination-out';
+            trailCtx.fillStyle = `rgba(0, 0, 0, ${isMobile ? 0.05 : 0.03})`; 
+            trailCtx.fillRect(0, 0, width, height);
+            trailCtx.globalCompositeOperation = 'source-over';
             
+            // Borra POR COMPLETO el canvas de las cabezas cada frame (mantiene el brillo intacto)
+            headCtx.clearRect(0, 0, width, height);
+
             for (let i = 0; i < columns.length; i++) {
-                columns[i].draw(ctx);
+                columns[i].draw(trailCtx, headCtx);
             }
             requestAnimationFrame(animate);
         }
 
         window.addEventListener('resize', () => {
             initMatrix();
-            ctx.clearRect(0, 0, width, height);
+            trailCtx.clearRect(0, 0, width, height);
+            headCtx.clearRect(0, 0, width, height);
         });
 
         initMatrix(); 
@@ -334,32 +360,22 @@
         // ==========================================
         // PROTECCIÓN CONTRA CLICK DERECHO Y F12
         // ==========================================
-        
-        // Bloquear click derecho (menú contextual)
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-        });
+        document.addEventListener('contextmenu', e => e.preventDefault());
 
-        // Bloquear atajos de teclado de herramientas de desarrollo
         document.addEventListener('keydown', function(e) {
-            // Bloquear F12
             if (e.key === 'F12' || e.keyCode === 123) {
-                e.preventDefault();
-                return false;
+                e.preventDefault(); return false;
             }
-            // Bloquear Ctrl+Shift+I / Ctrl+Shift+J (DevTools y Consola)
             if (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) {
-                e.preventDefault();
-                return false;
+                e.preventDefault(); return false;
             }
-            // Bloquear Ctrl+U (Ver código fuente)
             if (e.ctrlKey && (e.key === 'U' || e.key === 'u')) {
-                e.preventDefault();
-                return false;
+                e.preventDefault(); return false;
             }
         });
 
     </script>
 </body>
 </html>
+
 
