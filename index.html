@@ -301,9 +301,9 @@
         }
 
         .planet-jupiter {
-            bottom: -12vh;
-            right: -15vw;
-            width: 200px;
+            top: 15vh;
+            left: 25vw;
+            width: 400px;
             z-index: 25;
             filter: drop-shadow(0 0 60px rgba(150, 100, 50, 0.4));
             -webkit-filter: drop-shadow(0 0 60px rgba(150, 100, 50, 0.4));
@@ -463,8 +463,8 @@
             .asteroid img { width: 55px; }
 
             .planet-uranus { width: 85px; top: 60vh; left: 5vw; }
-            .planet-jupiter { width: 250px; bottom: -2vh; right: -12vw; }
-            .planet-mercury { width: 40px; top: 38vh; left: 70vw; }
+            .planet-jupiter { width: 250px; top: 15vh; left: 15vw; }
+            .planet-mercury { width: 80px; top: 38vh; left: 70vw; }
             .spaceship-container { width: 50px; top: 40vh; }
             
             /* Ajustar estrellas para móvil */
@@ -479,7 +479,7 @@
         .corner-logo {
             position: absolute;
             bottom: max(25px, env(safe-area-inset-bottom));
-            left: max(25px, env(safe-area-inset-left));
+            right: max(25px, env(safe-area-inset-right));
             z-index: 100;
             display: block;
             transition: all 0.3s ease;
@@ -516,7 +516,7 @@
         @media (max-width: 768px) {
             .corner-logo {
                 bottom: max(15px, env(safe-area-inset-bottom));
-                left: max(15px, env(safe-area-inset-left));
+                right: max(15px, env(safe-area-inset-right));
             }
             .corner-logo img {
                 height: 24px; /* Aún más sutil en móviles */
