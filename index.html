@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bubbles Xat</title>
+    <title>MI XATFRAME - CSS Puro</title>
     <style>
         /* =========================================
            Reset, Base y Compatibilidad Cross-Browser
@@ -214,6 +214,7 @@
             animation: snowflakes-shake 4s ease-in-out infinite;
             -webkit-animation: snowflakes-shake 4s ease-in-out infinite;
             pointer-events: auto; /* REACTIVAR la interacción exclusivamente en las burbujas */
+            cursor: pointer;
             will-change: transform; 
         }
 
@@ -230,6 +231,7 @@
             padding: 12px;
             border-radius: 50%;
             cursor: pointer;
+            pointer-events: auto; /* REACTIVAR la interacción en el elemento cliqueable */
             
             background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.15) 100%);
             box-shadow: 0 4px 12px rgba(0,0,0,0.2), inset 0 0 15px rgba(255,255,255,0.6);
@@ -294,9 +296,9 @@
         @-webkit-keyframes snowflakes-shake { 0%, 100% { -webkit-transform: translateX(0); } 50% { -webkit-transform: translateX(40px); } }
 
         /* =========================================
-           Efecto Splash Interactivos (Pop)
+           Efecto Splash Interactivos (Pop) manejado por JS
            ========================================= */
-        .inner:active, .inner:focus {
+        .inner.popped {
             transform: scale(1.4);
             -webkit-transform: scale(1.4);
             opacity: 0;
@@ -312,7 +314,7 @@
             cursor: default;
         }
 
-        .inner:active .emoji, .inner:focus .emoji {
+        .inner.popped .emoji {
             opacity: 0 !important;
             transition: opacity 0.1s;
             -webkit-transition: opacity 0.1s;
@@ -338,7 +340,7 @@
             pointer-events: none;
         }
 
-        .inner:active::before, .inner:focus::before {
+        .inner.popped::before {
             animation: splash-anim 0.4s ease-out forwards;
             -webkit-animation: splash-anim 0.4s ease-out forwards;
         }
@@ -547,5 +549,37 @@
         </a>
     </div>
 
+    <!-- Script Minimalista para Eventos de Explosión en el iFrame -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bubbles = document.querySelectorAll('.inner');
+            
+            bubbles.forEach(bubble => {
+                const popHandler = (e) => {
+                    // Prevenir comportamiento por defecto para evitar doble disparo en dispositivos táctiles
+                    if(e.cancelable) {
+                        e.preventDefault();
+                    }
+                    
+                    // Si ya está reventada, no hacer nada
+                    if (bubble.classList.contains('popped')) return;
+                    
+                    // Aplicar el estado estallado
+                    bubble.classList.add('popped');
+                    
+                    // Remover la clase después de que termine la animación splash (400ms)
+                    // Esto permite que el delay del CSS (1.2s) entre en acción y la burbuja reaparezca suavemente.
+                    setTimeout(() => {
+                        bubble.classList.remove('popped');
+                    }, 400); 
+                };
+
+                // Asignar los eventos requeridos
+                bubble.addEventListener('pointerdown', popHandler);
+                bubble.addEventListener('mousedown', popHandler);
+                bubble.addEventListener('touchstart', popHandler, { passive: false });
+            });
+        });
+    </script>
 </body>
 </html>
