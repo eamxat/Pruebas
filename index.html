@@ -2,562 +2,788 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xat Bubble</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/favicon-16x16.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SELKIT REPRO XAT</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-        /* =========================================
-           BUBBLE XAT FRAME
-           ========================================= */
-        html { 
-            background-color: transparent; 
-            -webkit-tap-highlight-color: transparent; 
-            pointer-events: none; 
+        /* Embed Reset */
+        *, *::before, *::after {
+            box-sizing: border-box;
         }
-        body {
+
+        body, html {
             margin: 0;
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden; 
-            font-family: sans-serif;
-            user-select: none; 
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            background-color: transparent;
-            pointer-events: none; 
+            padding: 0;
+            background: transparent;
         }
 
-       
-        .bg-layer {
+        /* Variables */
+        :root {
+            --pastel-pink: #ff8acb;
+            --soft-lilac: #caa6ff;
+            --light-lavender: #efe7ff;
+            --glass-bg: rgba(0, 0, 0, 0.65);
+            --glass-border: rgba(255, 138, 203, 0.4);
+        }
+
+        /* STRICT SIZE CONTAINER */
+        .radio-widget {
+            position: relative;
+            width: 637px;
+            height: 363px;
+            font-family: 'Poppins', sans-serif;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #000;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            user-select: none;
+            display: block;
+        }
+
+        /* Video Background - NO BLUR */
+        .bg-video {
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            z-index: -1;
-            background: linear-gradient(to bottom, #020b1f, #0b2a5a);
-            transition: background 0.6s ease;
-            -webkit-transition: background 0.6s ease;
-            pointer-events: none; /* El fondo nunca captura clics */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
         }
 
-       
-        #bg-1:checked ~ .bg-layer { background: linear-gradient(to bottom, #020b1f, #0b2a5a); }
-        #bg-2:checked ~ .bg-layer { background: linear-gradient(to bottom, #ffd000, #a87c00); }
-        #bg-3:checked ~ .bg-layer { background: linear-gradient(to bottom, #00c853, #006b2c); }
-        #bg-4:checked ~ .bg-layer { background: linear-gradient(to bottom, #ff2a2a, #7a0000); }
-        #bg-5:checked ~ .bg-layer { background: linear-gradient(to bottom, #7b2cff, #2b0066); }
-
-       
-        .hidden-radio {
-            display: none;
-            appearance: none;
-            -webkit-appearance: none;
-        }
-        
-      
-        .controls-wrapper {
+        /* Light Dark Overlay for Contrast */
+        .video-overlay {
             position: absolute;
-            top: 82px;
-            left: 20px;
-            z-index: 10000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 2;
+        }
+
+        /* Reusable UI Elements */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        button {
+            cursor: pointer;
+            outline: none;
+            border: none;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        /* Top Left Panel (Clock) */
+        .top-left-panel {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            padding: 5px 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .date-text {
+            color: var(--pastel-pink);
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .time-text {
+            color: #fff;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.1;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        /* Top Right Panel (Icons) */
+        .top-right-panel {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+        }
+
+        .top-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--light-lavender);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .top-btn:hover {
+            color: #fff;
+            border-color: var(--pastel-pink);
+            box-shadow: 0 0 10px rgba(255, 138, 203, 0.3);
+        }
+
+        #warning-btn {
+            color: var(--pastel-pink);
+        }
+
+        #warning-btn:hover {
+            text-shadow: 0 0 10px var(--pastel-pink);
+            transform: scale(1.05);
+        }
+
+        /* Bottom Control Bar */
+        .bottom-bar {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            height: 80px;
+            border-radius: 20px;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            padding: 0 15px;
+            gap: 15px;
+        }
+
+        /* Left Side: Play & Album */
+        .bar-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .main-play-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid var(--pastel-pink);
+            color: #fff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 138, 203, 0.4);
+            padding-left: 4px; /* optical centering */
+            flex-shrink: 0;
+        }
+
+        .main-play-btn.playing {
+            padding-left: 0;
+            color: var(--soft-lilac);
+            border-color: var(--soft-lilac);
+            box-shadow: 0 0 15px rgba(202, 166, 255, 0.4);
+        }
+
+        .main-play-btn:hover {
+            transform: scale(1.05);
+            background: rgba(255, 138, 203, 0.1);
+        }
+
+        .album-wrapper {
+            position: relative;
+            width: 55px;
+            height: 55px;
+            flex-shrink: 0;
+        }
+
+        #sonic_art {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            background: rgba(255,255,255,0.1); /* fallback */
+        }
+
+        #sonic_art img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .al-aire-badge {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--pastel-pink);
+            color: #000;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+
+        .al-aire-dot {
+            width: 5px;
+            height: 5px;
+            background: #fff;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        /* Center Area */
+        .bar-center {
+            flex-grow: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            pointer-events: none; 
-        }
-
-       
-        .bg-controls-wrapper {
-            position: absolute;
-            top: 82px;
-            right: 20px;
-            z-index: 10000;
-            pointer-events: none; 
-        }
-
-        
-        .circular-btn, .bg-circular-btn {
-            position: relative;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            display: flex;
             justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            -webkit-transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            touch-action: manipulation; 
-            pointer-events: auto; 
+            overflow: hidden;
+            gap: 6px;
         }
 
-        .circular-btn { width: 46px; height: 46px; }
-        .bg-circular-btn { width: 38px; height: 38px; }
-
-        @media (hover: hover) and (pointer: fine) {
-            .circular-btn:hover, .bg-circular-btn:hover {
-                background: rgba(255, 255, 255, 0.25);
-                transform: scale(1.08);
-                -webkit-transform: scale(1.08);
-                border-color: rgba(255, 255, 255, 0.5);
-            }
-            .footer-logo-link:hover .footer-logo {
-                opacity: 1;
-                transform: scale(1.1);
-                -webkit-transform: scale(1.1);
-                filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
-                -webkit-filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
-            }
-        }
-
-        /* Iconos */
-        .switch-icon { width: 22px; height: 22px; }
-        .bg-icon { width: 18px; height: 18px; }
-        .switch-icon, .bg-icon {
-            fill: currentColor;
-            pointer-events: none; 
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            -webkit-transition: -webkit-transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        
-        #state-1:checked ~ .controls-wrapper .switch-icon { transform: rotate(0deg); -webkit-transform: rotate(0deg); }
-        #state-2:checked ~ .controls-wrapper .switch-icon { transform: rotate(90deg); -webkit-transform: rotate(90deg); }
-        #state-3:checked ~ .controls-wrapper .switch-icon { transform: rotate(180deg); -webkit-transform: rotate(180deg); }
-        #state-4:checked ~ .controls-wrapper .switch-icon { transform: rotate(270deg); -webkit-transform: rotate(270deg); }
-
-        #bg-1:checked ~ .bg-controls-wrapper .bg-icon { transform: rotate(0deg); -webkit-transform: rotate(0deg); }
-        #bg-2:checked ~ .bg-controls-wrapper .bg-icon { transform: rotate(72deg); -webkit-transform: rotate(72deg); }
-        #bg-3:checked ~ .bg-controls-wrapper .bg-icon { transform: rotate(144deg); -webkit-transform: rotate(144deg); }
-        #bg-4:checked ~ .bg-controls-wrapper .bg-icon { transform: rotate(216deg); -webkit-transform: rotate(216deg); }
-        #bg-5:checked ~ .bg-controls-wrapper .bg-icon { transform: rotate(288deg); -webkit-transform: rotate(288deg); }
-
-        
-        .state-label, .bg-label {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            cursor: pointer;
-            border-radius: 50%;
-            z-index: 1;
-            display: none;
-            touch-action: manipulation;
-            pointer-events: auto; 
-        }
-        
-        #state-1:checked ~ .controls-wrapper .label-1, #state-2:checked ~ .controls-wrapper .label-2,
-        #state-3:checked ~ .controls-wrapper .label-3, #state-4:checked ~ .controls-wrapper .label-4,
-        #bg-1:checked ~ .bg-controls-wrapper .bg-label-1, #bg-2:checked ~ .bg-controls-wrapper .bg-label-2,
-        #bg-3:checked ~ .bg-controls-wrapper .bg-label-3, #bg-4:checked ~ .bg-controls-wrapper .bg-label-4,
-        #bg-5:checked ~ .bg-controls-wrapper .bg-label-5 {
-            display: block;
-        }
-
-       
-        .instruction-text {
-            margin-top: 8px;
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.6);
-            letter-spacing: 0.5px;
-            text-transform: lowercase;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-            pointer-events: none; 
-        }
-
-        /* Footer y Logo */
-        .footer-container {
-            position: absolute;
-            bottom: 25px;
-            width: 100%;
+        .title-row {
             display: flex;
-            justify-content: center;
-            z-index: 10000;
-            pointer-events: none;
+            align-items: center;
+            gap: 10px;
         }
 
-        .footer-logo-link {
-            pointer-events: auto; 
-            display: inline-block;
-            touch-action: manipulation;
+        #sonic_title {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
-        .footer-logo {
-            height: 26px;
-            width: auto;
-            opacity: 0.6;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
-            -webkit-filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
-            transition: all 0.3s ease;
-            -webkit-transition: all 0.3s ease;
+        /* Equalizer */
+        .equalizer {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 12px;
+            flex-shrink: 0;
         }
 
-       
-        .snowflakes {
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100vw; height: 100vh;
-            pointer-events: none; 
-            z-index: 9998; 
+        .eq-bar {
+            width: 3px;
+            background: var(--soft-lilac);
+            border-radius: 2px;
+            height: 3px;
+            box-shadow: 0 0 5px var(--soft-lilac);
+            transition: height 0.2s ease;
         }
 
-   
-        .snowflake {
-            position: fixed;
-            bottom: -150px;
-            z-index: 9999;
-            animation: snowflakes-shake 4s ease-in-out infinite;
-            -webkit-animation: snowflakes-shake 4s ease-in-out infinite;
-            pointer-events: auto; 
-            cursor: pointer;
-            will-change: transform; 
+        .equalizer.active .eq-bar {
+            background: var(--pastel-pink);
+            box-shadow: 0 0 5px var(--pastel-pink);
+            animation: eq-play 1s infinite alternate ease-in-out;
         }
 
-        .faller {
-            animation: snowflakes-fall 12s linear infinite;
-            -webkit-animation: snowflakes-fall 12s linear infinite;
+        .equalizer.active .eq-bar:nth-child(1) { animation-delay: 0.1s; animation-duration: 0.6s; }
+        .equalizer.active .eq-bar:nth-child(2) { animation-delay: 0.3s; animation-duration: 0.8s; }
+        .equalizer.active .eq-bar:nth-child(3) { animation-delay: 0.0s; animation-duration: 0.5s; }
+
+        @keyframes eq-play {
+            0% { height: 3px; }
+            100% { height: 12px; }
         }
 
-        .inner {
-            position: relative;
+        /* Badges Row */
+        .badges-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-badge {
             display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 500;
+            padding: 3px 10px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        #sonic_listeners, #sonic_dj {
+            display: inline-block;
+        }
+
+        .pausa-btn {
+            background: transparent;
+            border: 1px solid var(--soft-lilac);
+            color: var(--soft-lilac);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 12px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+
+        .pausa-btn:hover {
+            background: rgba(202, 166, 255, 0.2);
+            color: #fff;
+        }
+
+        .pausa-btn.playing {
+            border-color: var(--pastel-pink);
+            color: var(--pastel-pink);
+        }
+
+        /* Additional Space Image Container */
+        .empty-space-image {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+        }
+
+        /* Right Controls */
+        .bar-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--light-lavender);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-btn:hover {
+            color: #fff;
+            border-color: var(--pastel-pink);
+            box-shadow: 0 0 8px rgba(255, 138, 203, 0.3);
+        }
+
+        .vol-container {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding-right: 8px;
+        }
+
+        .vol-container .action-btn {
+            border: none;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 50px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--pastel-pink);
+            cursor: pointer;
+            box-shadow: 0 0 5px var(--pastel-pink);
+        }
+
+        /* Modal Warning Popup */
+        .modal-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            display: flex;
             justify-content: center;
             align-items: center;
-            padding: 12px;
-            border-radius: 50%;
-            cursor: pointer;
-            pointer-events: auto; 
-            
-            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.15) 100%);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2), inset 0 0 15px rgba(255,255,255,0.6);
-            backdrop-filter: blur(3px);
-            -webkit-backdrop-filter: blur(3px);
-            border: 1px solid rgba(255,255,255,0.4);
-            
-            outline: none;
-            -webkit-tap-highlight-color: transparent;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: rgba(20, 15, 30, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--pastel-pink);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(255, 138, 203, 0.2);
+            padding: 30px 25px;
+            border-radius: 16px;
+            text-align: center;
+            width: 85%;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.show .modal-content {
             transform: scale(1);
-            -webkit-transform: scale(1);
-            opacity: 1;
-
-            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease-in, box-shadow 0.5s;
-            -webkit-transition: -webkit-transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.5s ease-in, box-shadow 0.5s;
-            transition-delay: 1.2s;
-            touch-action: manipulation;
-            will-change: transform, opacity;
         }
 
-        
-        .img-main, .img-alt, .emoji, .placeholder {
-            display: block;
-            border-radius: 50%;
-           
-            max-width: 25vw;
-            max-height: 25vw;
-            object-fit: contain;
+        .modal-content p {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
         }
 
-        .emoji {
+        .close-btn {
+            background: rgba(255, 138, 203, 0.15);
+            border: 1px solid var(--pastel-pink);
+            color: var(--pastel-pink);
+            padding: 6px 20px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .close-btn:hover {
+            background: var(--pastel-pink);
+            color: #000;
+        }
+
+        /* Animations */
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8); }
+            70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(255, 255, 255, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+        }
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+            padding-left: 0 !important;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Particle System CSS */
+        .music-particle {
             position: absolute;
-            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
-            -webkit-filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.5));
-            opacity: 0;
-            transform: scale(0.5) rotate(-20deg);
-            -webkit-transform: scale(0.5) rotate(-20deg);
-            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            -webkit-transition: opacity 0.4s ease, -webkit-transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            pointer-events: none; 
-        }
-
-        .placeholder {
-            opacity: 0;
             pointer-events: none;
+            font-size: 14px;
+            z-index: 5;
+            animation: floatUp 1.5s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.5); opacity: 0; }
         }
 
-        #state-1:checked ~ .snowflakes .img-1, #state-2:checked ~ .snowflakes .img-2,
-        #state-3:checked ~ .snowflakes .img-3, #state-4:checked ~ .snowflakes .img-4 {
-            opacity: 1;
-            transform: scale(1) rotate(0deg);
-            -webkit-transform: scale(1) rotate(0deg);
-        }
-
-     
-        @keyframes snowflakes-fall { 0% { transform: translateY(0) scale(0.9); } 100% { transform: translateY(-130vh) scale(1.1); } }
-        @-webkit-keyframes snowflakes-fall { 0% { -webkit-transform: translateY(0) scale(0.9); } 100% { -webkit-transform: translateY(-130vh) scale(1.1); } }
-        
-        @keyframes snowflakes-shake { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(40px); } }
-        @-webkit-keyframes snowflakes-shake { 0%, 100% { -webkit-transform: translateX(0); } 50% { -webkit-transform: translateX(40px); } }
-
-        
-        .inner.popped {
-            transform: scale(1.4);
-            -webkit-transform: scale(1.4);
-            opacity: 0;
-            box-shadow: none;
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
-            border-color: transparent;
-            background: transparent;
-            
-            transition: transform 0.15s ease-out, opacity 0.2s ease-out, box-shadow 0.1s, background 0.1s;
-            -webkit-transition: -webkit-transform 0.15s ease-out, opacity 0.2s ease-out, box-shadow 0.1s, background 0.1s;
-            transition-delay: 0s;
-            cursor: default;
-        }
-
-        .inner.popped .emoji {
-            opacity: 0 !important;
-            transition: opacity 0.1s;
-            -webkit-transition: opacity 0.1s;
-            transition-delay: 0s;
-        }
-
-        .inner::before {
-            content: "";
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 5px; height: 5px;
-            border-radius: 50%;
-            background: transparent;
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0);
-            -webkit-transform: translate(-50%, -50%) scale(0);
-            
-            box-shadow: 
-                30px 30px 0 1px rgba(255,255,255,0.9), -30px -30px 0 0px rgba(255,255,255,0.7),
-                30px -30px 0 2px rgba(255,255,255,0.8), -30px 30px 0 1px rgba(255,255,255,0.9),
-                0 45px 0 0px rgba(255,255,255,0.7), 0 -45px 0 2px rgba(255,255,255,0.8),
-                45px 0 0 1px rgba(255,255,255,0.9), -45px 0 0 0px rgba(255,255,255,0.7);
-            pointer-events: none;
-        }
-
-        .inner.popped::before {
-            animation: splash-anim 0.4s ease-out forwards;
-            -webkit-animation: splash-anim 0.4s ease-out forwards;
-        }
-
-        @keyframes splash-anim {
-            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.2); }
-            100% { opacity: 0; transform: translate(-50%, -50%) scale(1.8); }
-        }
-        @-webkit-keyframes splash-anim {
-            0% { opacity: 1; -webkit-transform: translate(-50%, -50%) scale(0.2); }
-            100% { opacity: 0; -webkit-transform: translate(-50%, -50%) scale(1.8); }
-        }
-
-      
-        @media (max-width: 480px) {
-            .controls-wrapper { top: 77px; left: 15px; }
-            .bg-controls-wrapper { top: 77px; right: 15px; }
-            .circular-btn { width: 42px; height: 42px; }
-            .bg-circular-btn { width: 34px; height: 34px; }
-            .instruction-text { font-size: 10px; margin-top: 5px; }
-            .footer-logo { height: 22px; }
-            .footer-container { bottom: 15px; }
-        }
-
-        
-        .snowflake:nth-of-type(1) { left: 5%; animation-delay: 0s; -webkit-animation-delay: 0s; } .snowflake:nth-of-type(1) .faller { animation-duration: 11s; -webkit-animation-duration: 11s; animation-delay: 0s; -webkit-animation-delay: 0s; }
-        .snowflake:nth-of-type(2) { left: 15%; animation-delay: 1s; -webkit-animation-delay: 1s; } .snowflake:nth-of-type(2) .faller { animation-duration: 13s; -webkit-animation-duration: 13s; animation-delay: 1s; -webkit-animation-delay: 1s; }
-        .snowflake:nth-of-type(3) { left: 25%; animation-delay: 0.5s; -webkit-animation-delay: 0.5s; } .snowflake:nth-of-type(3) .faller { animation-duration: 10s; -webkit-animation-duration: 10s; animation-delay: 4s; -webkit-animation-delay: 4s; }
-        .snowflake:nth-of-type(4) { left: 35%; animation-delay: 2s; -webkit-animation-delay: 2s; } .snowflake:nth-of-type(4) .faller { animation-duration: 14s; -webkit-animation-duration: 14s; animation-delay: 2s; -webkit-animation-delay: 2s; }
-        .snowflake:nth-of-type(5) { left: 45%; animation-delay: 2s; -webkit-animation-delay: 2s; } .snowflake:nth-of-type(5) .faller { animation-duration: 12s; -webkit-animation-duration: 12s; animation-delay: 5s; -webkit-animation-delay: 5s; }
-        .snowflake:nth-of-type(6) { left: 55%; animation-delay: 3s; -webkit-animation-delay: 3s; } .snowflake:nth-of-type(6) .faller { animation-duration: 15s; -webkit-animation-duration: 15s; animation-delay: 8s; -webkit-animation-delay: 8s; }
-        .snowflake:nth-of-type(7) { left: 65%; animation-delay: 2s; -webkit-animation-delay: 2s; } .snowflake:nth-of-type(7) .faller { animation-duration: 9s; -webkit-animation-duration: 9s; animation-delay: 3s; -webkit-animation-delay: 3s; } 
-        .snowflake:nth-of-type(8) { left: 75%; animation-delay: 1s; -webkit-animation-delay: 1s; } .snowflake:nth-of-type(8) .faller { animation-duration: 12s; -webkit-animation-duration: 12s; animation-delay: 1.5s; -webkit-animation-delay: 1.5s; }
-        .snowflake:nth-of-type(9) { left: 85%; animation-delay: 0s; -webkit-animation-delay: 0s; } .snowflake:nth-of-type(9) .faller { animation-duration: 14s; -webkit-animation-duration: 14s; animation-delay: 6s; -webkit-animation-delay: 6s; }
-        .snowflake:nth-of-type(10) { left: 92%; animation-delay: 1.5s; -webkit-animation-delay: 1.5s; } .snowflake:nth-of-type(10) .faller { animation-duration: 11s; -webkit-animation-duration: 11s; animation-delay: 2.5s; -webkit-animation-delay: 2.5s; }
-        .snowflake:nth-of-type(11) { left: 10%; animation-delay: 0s; -webkit-animation-delay: 0s; } .snowflake:nth-of-type(11) .faller { animation-duration: 13s; -webkit-animation-duration: 13s; animation-delay: 7s; -webkit-animation-delay: 7s; }
-        .snowflake:nth-of-type(12) { left: 80%; animation-delay: 2.5s; -webkit-animation-delay: 2.5s; } .snowflake:nth-of-type(12) .faller { animation-duration: 10s; -webkit-animation-duration: 10s; animation-delay: 0.5s; -webkit-animation-delay: 0.5s; }
     </style>
 </head>
 <body>
 
-   
-    <input type="radio" name="bg-color-state" id="bg-1" class="hidden-radio" checked>
-    <input type="radio" name="bg-color-state" id="bg-2" class="hidden-radio">
-    <input type="radio" name="bg-color-state" id="bg-3" class="hidden-radio">
-    <input type="radio" name="bg-color-state" id="bg-4" class="hidden-radio">
-    <input type="radio" name="bg-color-state" id="bg-5" class="hidden-radio">
+    <!-- Container STRICT 637x363 -->
+    <div class="radio-widget" id="radio-widget">
+        
+        <!-- Background Video (NO BLUR) -->
+        <video class="bg-video" autoplay loop muted playsinline>
+            <source src="https://i.imgur.com/Yttz3wP.mp4" type="video/mp4">
+        </video>
+        <div class="video-overlay"></div>
 
-    <div class="bg-layer"></div>
-
-    <input type="radio" name="emoji-state" id="state-1" class="hidden-radio" checked>
-    <input type="radio" name="emoji-state" id="state-2" class="hidden-radio">
-    <input type="radio" name="emoji-state" id="state-3" class="hidden-radio">
-    <input type="radio" name="emoji-state" id="state-4" class="hidden-radio">
-
- 
-    <div class="controls-wrapper">
-        <div class="circular-btn">
-            <svg class="switch-icon" viewBox="0 0 24 24">
-                <path d="M8 5h10.5l-3.3 3.3 1.4 1.4L22.2 4.1 16.6-1.5l-1.4 1.4L18.5 3H8c-2.8 0-5 2.2-5 5v3h2V8c0-1.7 1.3-3 3-3zm8 14H5.5l3.3-3.3-1.4-1.4L1.8 19.9l5.6 5.6 1.4-1.4L5.5 21H16c2.8 0 5-2.2 5-5v-3h-2v3c0 1.7-1.3 3-3 3z"/>
-            </svg>
-            <label for="state-2" class="state-label label-1"></label>
-            <label for="state-3" class="state-label label-2"></label>
-            <label for="state-4" class="state-label label-3"></label>
-            <label for="state-1" class="state-label label-4"></label>
+        <!-- Warning Modal -->
+        <div class="modal-overlay" id="warning-modal">
+            <div class="modal-content">
+                <p>ESTE REPRODUCTOR ES EXCLUSIVO DE XAT.COM/SELKIT</p>
+                <button class="close-btn" id="close-modal">Cerrar</button>
+            </div>
         </div>
-        <span class="instruction-text">touch the bubble</span>
-    </div>
 
-    
-    <div class="bg-controls-wrapper">
-        <div class="bg-circular-btn">
-            <svg class="bg-icon" viewBox="0 0 24 24">
-                <path d="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10c1.38,0 2.5,-1.12 2.5,-2.5c0,-0.61 -0.23,-1.17 -0.62,-1.61c-0.38,-0.42 -0.61,-0.99 -0.61,-1.61c0,-1.23 0.99,-2.23 2.23,-2.23h2.5c3.31,0 6,-2.69 6,-6C24,6.48 18.62,2 12,2z M6.5,11.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5s1.5,0.67 1.5,1.5S7.33,11.5 6.5,11.5z M9.5,7.5C8.67,7.5 8,6.83 8,6s0.67,-1.5 1.5,-1.5S11,5.17 11,6S10.33,7.5 9.5,7.5z M14.5,7.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5s1.5,0.67 1.5,1.5S15.33,7.5 14.5,7.5z M17.5,11.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5s1.5,0.67 1.5,1.5S18.33,11.5 17.5,11.5z"/>
-            </svg>
-            <label for="bg-2" class="bg-label bg-label-1"></label>
-            <label for="bg-3" class="bg-label bg-label-2"></label>
-            <label for="bg-4" class="bg-label bg-label-3"></label>
-            <label for="bg-5" class="bg-label bg-label-4"></label>
-            <label for="bg-1" class="bg-label bg-label-5"></label>
+        <!-- Top Left: Clock -->
+        <div class="top-left-panel glass-panel">
+            <div class="date-text" id="date-text">MIE 11/3</div>
+            <div class="time-text" id="time-text">00:00</div>
         </div>
-    </div>
 
-   
-    <div class="snowflakes" aria-hidden="true">
-        
-        
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="45" height="45" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="45" height="45" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="45" height="45" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="45" height="45" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="45" height="45" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
+        <!-- Top Right: Icons -->
+        <div class="top-right-panel">
+            <button class="top-btn glass-panel" id="warning-btn" title="Advertencia">
+                <i class="fas fa-exclamation-triangle"></i>
+            </button>
+        </div>
 
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="60" height="60" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="60" height="60" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="60" height="60" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="60" height="60" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="60" height="60" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="80" height="80" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="80" height="80" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="80" height="80" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="80" height="80" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="80" height="80" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="40" height="40" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="40" height="40" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="40" height="40" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="40" height="40" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="40" height="40" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="100" height="100" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="100" height="100" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="100" height="100" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="100" height="100" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="100" height="100" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-       
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="55" height="55" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="55" height="55" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="55" height="55" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="55" height="55" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="55" height="55" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="70" height="70" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="70" height="70" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="70" height="70" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="70" height="70" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="70" height="70" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="90" height="90" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="90" height="90" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="90" height="90" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="90" height="90" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="90" height="90" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="50" height="50" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="50" height="50" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="50" height="50" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="50" height="50" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="50" height="50" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-      
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="75" height="75" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="75" height="75" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="75" height="75" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="75" height="75" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="75" height="75" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="110" height="110" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="110" height="110" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="110" height="110" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="110" height="110" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="110" height="110" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-        <div class="snowflake"><div class="faller"><div class="inner" tabindex="0">
-            <img class="placeholder" width="35" height="35" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="">
-            <img class="emoji img-1" width="35" height="35" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(rolleye)_80.webp" alt="emoji">
-            <img class="emoji img-2" width="35" height="35" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/hi.webp" alt="emoji">
-            <img class="emoji img-3" width="35" height="35" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(maniac)_80.webp" alt="emoji">
-            <img class="emoji img-4" width="35" height="35" src="https://raw.githubusercontent.com/eamxat/Images/refs/heads/main/a_(ahhh)_80.webp" alt="emoji">
-        </div></div></div>
-
-    </div>
-
-    
-    <div class="footer-container">
-        <a href="https://xat.com" target="_blank" rel="noopener noreferrer" class="footer-logo-link">
-            <img src="https://raw.githubusercontent.com/eamxat/Images/a4f50d39d3de6271b50c3748b6087692eab532e2/xatlogo%20text2.svg" alt="xat logo" class="footer-logo">
-        </a>
-    </div>
-
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const bubbles = document.querySelectorAll('.inner');
+        <!-- Bottom Bar -->
+        <div class="bottom-bar glass-panel">
             
-            bubbles.forEach(bubble => {
-                const popHandler = (e) => {
+            <div class="bar-left">
+                <button class="main-play-btn" id="main-play-btn">
+                    <i class="fas fa-play" id="main-play-icon"></i>
+                </button>
+                
+                <div class="album-wrapper">
+                    <div class="al-aire-badge">
+                        <div class="al-aire-dot"></div>AL AIRE
+                    </div>
+                    <!-- Sonic Art Widget -->
+                    <div id='sonic_art'></div>
+                </div>
+            </div>
 
-                    if(e.cancelable) {
-                        e.preventDefault();
-                    }
-                    
-                   
-                    if (bubble.classList.contains('popped')) return;
-                    
-                    bubble.classList.add('popped');
-                    
-                    setTimeout(() => {
-                        bubble.classList.remove('popped');
-                    }, 400); 
-                };
+            <div class="bar-center">
+                <div class="title-row">
+                    <!-- Sonic Title Widget -->
+                    <div id='sonic_title'></div>
+                    <div class="equalizer" id="equalizer">
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                        <div class="eq-bar"></div>
+                    </div>
+                </div>
+                <div class="badges-row">
+                    <div class="info-badge">DJ: <div id='sonic_dj'></div></div>
+                    <div class="info-badge">Oyentes: <div id='sonic_listeners'></div></div>
+                    <button class="pausa-btn" id="pausa-btn">PLAY</button>
+                </div>
+            </div>
 
-                bubble.addEventListener('pointerdown', popHandler);
-                bubble.addEventListener('mousedown', popHandler);
-                bubble.addEventListener('touchstart', popHandler, { passive: false });
-            });
+            <!-- New Image in Empty Space -->
+            <div class="empty-space-image">
+                <img src="https://i.ibb.co/Txh2DbGQ/a-lapin-lbdj-onair-20.webp" alt="On Air" style="display: block;">
+            </div>
+
+            <div class="bar-right">
+                <div class="vol-container">
+                    <button class="action-btn" id="vol-icon-btn"><i class="fas fa-volume-up" id="vol-icon"></i></button>
+                    <input type="range" id="vol-slider" min="0" max="1" step="0.01" value="0.75">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Invisible Audio Element -->
+        <audio id="audio-stream" src="https://fire.doscast.com/8004/stream" crossorigin="anonymous"></audio>
+    </div>
+
+    <!-- Sonic / Doscast Scripts -->
+    <script id='sonic_js' data-port='8004' src='https://fire.doscast.com/cp/widgets.js?r=976'></script>
+
+    <script>
+        // --- Elements ---
+        const audio = document.getElementById('audio-stream');
+        const mainPlayBtn = document.getElementById('main-play-btn');
+        const mainPlayIcon = document.getElementById('main-play-icon');
+        const pausaBtn = document.getElementById('pausa-btn');
+        const equalizer = document.getElementById('equalizer');
+        const volSlider = document.getElementById('vol-slider');
+        const volIcon = document.getElementById('vol-icon');
+        const radioWidget = document.getElementById('radio-widget');
+        
+        // Modal Elements
+        const warningBtn = document.getElementById('warning-btn');
+        const warningModal = document.getElementById('warning-modal');
+        const closeModal = document.getElementById('close-modal');
+
+        let isPlaying = false;
+        let isLoading = false;
+        let reconnectTimeout;
+
+        // --- Clock & Date (Spanish) ---
+        function updateClock() {
+            const now = new Date();
+            
+            // Time
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('time-text').textContent = `${hours}:${minutes}`;
+
+            // Date Format: MIE 11/3
+            const days = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+            const dayName = days[now.getDay()];
+            const dayNum = now.getDate();
+            const monthNum = now.getMonth() + 1;
+            document.getElementById('date-text').textContent = `${dayName} ${dayNum}/${monthNum}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // --- Modal ---
+        warningBtn.addEventListener('click', () => {
+            warningModal.classList.add('show');
         });
+        closeModal.addEventListener('click', () => {
+            warningModal.classList.remove('show');
+        });
+        warningModal.addEventListener('click', (e) => {
+            if (e.target === warningModal) warningModal.classList.remove('show');
+        });
+
+        // --- Audio Logic ---
+        function togglePlay() {
+            if (audio.paused) {
+                setLoadingState(true);
+                audio.load(); // catch live edge
+                audio.play().catch(err => {
+                    console.error("Playback failed:", err);
+                    setLoadingState(false);
+                    setPlayingState(false);
+                });
+            } else {
+                audio.pause();
+                setPlayingState(false);
+            }
+        }
+
+        mainPlayBtn.addEventListener('click', togglePlay);
+        pausaBtn.addEventListener('click', togglePlay);
+
+        audio.addEventListener('playing', () => {
+            clearTimeout(reconnectTimeout);
+            setLoadingState(false);
+            setPlayingState(true);
+        });
+
+        audio.addEventListener('waiting', () => {
+            setLoadingState(true);
+        });
+
+        audio.addEventListener('pause', () => {
+            setPlayingState(false);
+        });
+
+        // Auto-reconnect
+        audio.addEventListener('error', () => {
+            setLoadingState(false);
+            setPlayingState(false);
+            clearTimeout(reconnectTimeout);
+            if (isPlaying || isLoading) {
+                reconnectTimeout = setTimeout(() => {
+                    setLoadingState(true);
+                    audio.load();
+                    audio.play().catch(() => setLoadingState(false));
+                }, 5000);
+            }
+        });
+
+        function setPlayingState(state) {
+            isPlaying = state;
+            if (isPlaying) {
+                mainPlayIcon.className = 'fas fa-pause';
+                mainPlayBtn.classList.add('playing');
+                equalizer.classList.add('active');
+                pausaBtn.textContent = "PAUSA";
+                pausaBtn.classList.add('playing');
+            } else {
+                mainPlayIcon.className = 'fas fa-play';
+                mainPlayBtn.classList.remove('playing');
+                equalizer.classList.remove('active');
+                pausaBtn.textContent = "PLAY";
+                pausaBtn.classList.remove('playing');
+            }
+        }
+
+        function setLoadingState(state) {
+            isLoading = state;
+            if (isLoading) {
+                mainPlayIcon.className = 'fas fa-spinner';
+                equalizer.classList.remove('active');
+            } else {
+                setPlayingState(isPlaying);
+            }
+        }
+
+        // --- Volume Logic ---
+        volSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            audio.volume = val;
+            if (val == 0) {
+                volIcon.className = 'fas fa-volume-mute';
+            } else if (val < 0.5) {
+                volIcon.className = 'fas fa-volume-down';
+            } else {
+                volIcon.className = 'fas fa-volume-up';
+            }
+        });
+        audio.volume = volSlider.value;
+
+        // --- Music Particle Effect ---
+        const particleContainer = document.createElement('div');
+        particleContainer.style.position = 'absolute';
+        particleContainer.style.top = '0';
+        particleContainer.style.left = '0';
+        particleContainer.style.width = '100%';
+        particleContainer.style.height = '100%';
+        particleContainer.style.pointerEvents = 'none';
+        particleContainer.style.zIndex = '9';
+        particleContainer.style.overflow = 'hidden';
+        radioWidget.appendChild(particleContainer);
+
+        let lastParticleTime = 0;
+        radioWidget.addEventListener('mousemove', (e) => {
+            const now = Date.now();
+            if (now - lastParticleTime < 50) return; // Throttle particle generation
+            lastParticleTime = now;
+
+            const particle = document.createElement('span');
+            particle.className = 'music-particle';
+            const notes = ['♪', '♫', '♬', '♩'];
+            particle.textContent = notes[Math.floor(Math.random() * notes.length)];
+            
+            // Randomize color
+            const isPink = Math.random() > 0.5;
+            particle.style.color = isPink ? 'var(--pastel-pink)' : 'var(--soft-lilac)';
+            particle.style.textShadow = `0 0 8px ${isPink ? 'var(--pastel-pink)' : 'var(--soft-lilac)'}`;
+            
+            // Position based on widget
+            const rect = radioWidget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            
+            particleContainer.appendChild(particle);
+            
+            // Cleanup particle
+            setTimeout(() => {
+                if (particle.parentNode) {
+                    particle.parentNode.removeChild(particle);
+                }
+            }, 1500);
+        });
+
     </script>
 </body>
 </html>
