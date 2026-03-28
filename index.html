@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>FENIX | Renacimiento UI</title>
+    <title>Mae Xatspace</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,14 +50,14 @@
         }
 
         /* Optimización táctil (Evita delay de 300ms en móviles) */
-        a, button, .dock-icon, .card, .calendar-day, .glass-button, .carousel-btn, .sp-controls i, .sp-progress-bar, .sp-track, .heart-photo, .close-workspace, .sp-play-wrapper, .sp-like-btn, .friend-item { 
+        a, button, .dock-icon, .card, .calendar-day, .glass-button, .carousel-btn, .sp-controls i, .sp-progress-bar, .sp-track, .heart-photo, .close-workspace, .sp-play-wrapper, .sp-like-btn, .friend-item, .sp-vol-slider { 
             touch-action: manipulation; 
         }
 
         /* Solo aplicamos cursor none en dispositivos con ratón (Desktop) */
         @media (pointer: fine) {
             * { cursor: none !important; }
-            a, button, .dock-icon, .card, .calendar-day, .glass-button, .carousel-btn, .sp-controls i, .sp-progress-bar, .sp-track, .heart-photo, .close-workspace, .friend-item { cursor: none !important; }
+            a, button, .dock-icon, .card, .calendar-day, .glass-button, .carousel-btn, .sp-controls i, .sp-progress-bar, .sp-track, .heart-photo, .close-workspace, .friend-item, .sp-vol-slider { cursor: none !important; }
         }
 
         body {
@@ -493,8 +493,18 @@
         @media (hover: hover) { .spotify-style-player:hover .sp-progress-fill { background: linear-gradient(90deg, var(--red-fire), var(--yellow-warm)); box-shadow: 0 0 10px rgba(255,106,0,0.5); } }
         .sp-progress-dot { position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; background: #fff; border-radius: 50%; opacity: 0; transition: opacity 0.2s; box-shadow: 0 0 10px var(--orange-intense); }
         .sp-progress-container:hover .sp-progress-dot, .sp-progress-container:active .sp-progress-dot { opacity: 1; }
-        .sp-time-flex { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; }
         
+        .sp-time-flex { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; }
+        
+        /* ESTILOS DEL CONTROL DE VOLUMEN SUTIL */
+        .sp-volume-container { display: flex; align-items: center; gap: 6px; opacity: 0.8; transition: opacity 0.2s; }
+        @media (hover: hover) { .sp-volume-container:hover { opacity: 1; } }
+        .sp-vol-slider { width: 60px; height: 4px; -webkit-appearance: none; background: rgba(255, 255, 255, 0.15); border-radius: 2px; outline: none; }
+        .sp-vol-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%; background: #fff; cursor: pointer; transition: background 0.2s; }
+        .sp-vol-slider::-webkit-slider-thumb:hover { background: var(--orange-intense); box-shadow: 0 0 8px var(--orange-intense); }
+        .sp-vol-slider::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: #fff; border: none; cursor: pointer; transition: background 0.2s; }
+        .sp-vol-slider::-moz-range-thumb:hover { background: var(--orange-intense); box-shadow: 0 0 8px var(--orange-intense); }
+
         .sp-controls-main { grid-column: 2; grid-row: 4; display: flex; justify-content: flex-start; align-items: center; width: 100%; margin-top: 5px; gap: 30px; }
         .sp-controls-main i.ph-fill, .sp-controls-main i.ph-bold { font-size: 1.6rem; color: var(--text-main); opacity: 0.7; transition: all 0.2s; }
         @media (hover: hover) { .sp-controls-main i.ph-fill:hover, .sp-controls-main i.ph-bold:hover { opacity: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,0.5)); transform: scale(1.1); } }
@@ -792,6 +802,9 @@
             .sp-playlist { max-height: 120px; padding-top: 10px; -webkit-overflow-scrolling: touch; } 
             .sp-track { padding: 8px; }
             
+            /* Control Volumen Responsivo */
+            .sp-vol-slider { width: 50px; }
+            
             .music-layout { justify-content: flex-start; height: auto; min-height: 100%; padding: 10px; }
 
             /* Responsive Landing Screen */
@@ -916,6 +929,13 @@
                     </div>
                     <div class="sp-time-flex">
                         <span class="sp-time-current" id="sp-current-time">0:00</span>
+                        
+                        <!-- NUEVO: Control de Volumen Sutil -->
+                        <div class="sp-volume-container">
+                            <i class="ph-fill ph-speaker-high" id="sp-vol-icon" style="font-size: 1rem; cursor: pointer;"></i>
+                            <input type="range" id="sp-vol-slider" class="sp-vol-slider" min="0" max="1" step="0.01" value="1">
+                        </div>
+
                         <span class="sp-time-total" id="sp-total-time">0:00</span>
                     </div>
                 </div>
@@ -978,7 +998,7 @@
         <!-- VISTA YOUTUBE -->
         <div id="youtube-view" class="view-container youtube-layout">
             <div class="yt-iframe-wrapper">
-                <iframe src="https://www.youtube.com/embed/jfKfPfyJRdk" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                <iframe src="https://www.youtube.com/embed/UPgiyUjlqkA" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
         </div>
 
@@ -1069,7 +1089,7 @@
                 document.addEventListener('mouseup', () => cursor.classList.remove('click'));
 
                 // Añadido .friend-item a la lista de interactivos para reaccionar al hover
-                const interactives = document.querySelectorAll('a, button, .dock-icon, .card, .calendar-day, .glass-button, .carousel-btn, .sp-controls i, .sp-progress-bar, .sp-track, .heart-photo, .close-workspace, img, .center-render-wrapper, .landing-btn, .friend-item');
+                const interactives = document.querySelectorAll('a, button, .dock-icon, .card, .calendar-day, .glass-button, .carousel-btn, .sp-controls i, .sp-progress-bar, .sp-track, .heart-photo, .close-workspace, img, .center-render-wrapper, .landing-btn, .friend-item, .sp-vol-slider');
                 interactives.forEach(el => {
                     el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
                     el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
@@ -1083,6 +1103,14 @@
             if (landingEnterBtn && landingScreen) {
                 landingEnterBtn.addEventListener('click', () => {
                     landingScreen.classList.add('hidden');
+                    
+                    // --- NUEVO: Iniciar Autoplay al ingresar ---
+                    // Es seguro llamar a la función aquí ya que es interaccionada por el usuario
+                    if (typeof loadAndPlayTrack === 'function' && audioPlayer.paused) {
+                        loadAndPlayTrack(0); // Inicia siempre la canción 1
+                    }
+                    // -------------------------------------------
+
                     // Remover del flujo DOM después de la transición para mejor rendimiento
                     setTimeout(() => {
                         landingScreen.style.display = 'none';
@@ -1147,6 +1175,10 @@
             const currentArtist = document.getElementById('sp-current-artist');
             const coverImage = document.getElementById('sp-cover-image');
             
+            // Nuevo: Variables para control de volumen
+            const volSlider = document.getElementById('sp-vol-slider');
+            const volIcon = document.getElementById('sp-vol-icon');
+
             const spTracksNodes = document.querySelectorAll('.sp-track');
             const spTracks = Array.from(spTracksNodes);
             
@@ -1247,12 +1279,14 @@
                 totalTimeEl.textContent = formatTime(audioPlayer.duration);
             });
 
+            // --- NUEVO: Control contínuo firme ---
             audioPlayer.addEventListener('ended', () => {
                 if (isRepeat) {
                     audioPlayer.currentTime = 0;
                     audioPlayer.play();
                 } else {
-                    nextBtn.click();
+                    // El clic al nextBtn avanza naturalmente a la siguiente y hace el loop general gracias al módulo matemático (%)
+                    nextBtn.click(); 
                 }
             });
 
@@ -1264,6 +1298,36 @@
                     const duration = audioPlayer.duration;
                     if (duration) {
                         audioPlayer.currentTime = (clickX / width) * duration;
+                    }
+                });
+            }
+
+            // --- NUEVO: Control de Volumen ---
+            if (volSlider && volIcon) {
+                // Actualiza volumen en tiempo real
+                volSlider.addEventListener('input', (e) => {
+                    audioPlayer.volume = e.target.value;
+                    if (audioPlayer.volume === 0) {
+                        volIcon.className = 'ph-fill ph-speaker-x';
+                    } else if (audioPlayer.volume < 0.5) {
+                        volIcon.className = 'ph-fill ph-speaker-low';
+                    } else {
+                        volIcon.className = 'ph-fill ph-speaker-high';
+                    }
+                });
+                
+                // Opción mutear/desmutear haciendo clic en el icono
+                volIcon.addEventListener('click', () => {
+                    if (audioPlayer.volume > 0) {
+                        audioPlayer.dataset.lastVol = audioPlayer.volume; // Guarda último volumen
+                        audioPlayer.volume = 0;
+                        volSlider.value = 0;
+                        volIcon.className = 'ph-fill ph-speaker-x';
+                    } else {
+                        const lastVol = audioPlayer.dataset.lastVol || 1;
+                        audioPlayer.volume = lastVol;
+                        volSlider.value = lastVol;
+                        volIcon.className = lastVol < 0.5 ? 'ph-fill ph-speaker-low' : 'ph-fill ph-speaker-high';
                     }
                 });
             }
