@@ -204,6 +204,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            animation: fenixRenderFade 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes fenixRenderFade {
+            0% { opacity: 0; transform: translateX(-50%); }
+            100% { opacity: 1; transform: translateX(-50%); }
         }
 
         .center-render-wrapper img {
@@ -971,7 +977,7 @@
                         </div>
                         <i class="ph-bold ph-dots-three"></i>
                     </div>
-                    <div class="sp-track" data-title="I Love You" data-artist="Céline Dion" data-src="track3.mp3" data-img="cover3.jpg">
+                    <div class="sp-track" data-title="Without You" data-artist="Mariah Carey" data-src="track3.mp3" data-img="cover3.jpg">
                         <div class="sp-track-left">
                             <span class="sp-track-num">3</span>
                             <div class="sp-track-details">
